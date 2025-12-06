@@ -11,7 +11,7 @@ export class ConfigManager {
   private config: PublishConfig | null = null;
 
   constructor(vaultPath: string) {
-    this.configPath = path.join(vaultPath, '.olite', 'publish-config.json');
+    this.configPath = path.join(vaultPath, '.xin', 'publish-config.json');
   }
 
   /**
@@ -35,7 +35,7 @@ export class ConfigManager {
   async save(config: PublishConfig): Promise<void> {
     this.config = config;
 
-    // Ensure .olite directory exists
+    // Ensure .xin directory exists
     const dir = path.dirname(this.configPath);
     await fs.mkdir(dir, { recursive: true });
 
