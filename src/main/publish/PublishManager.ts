@@ -167,13 +167,15 @@ export class PublishManager {
     while (bodyStartIndex < lines.length && !lines[bodyStartIndex].trim()) {
       bodyStartIndex++;
     }
-    const body = lines.slice(bodyStartIndex).join('\n').trim();
+    const body = lines.slice(bodyStartIndex).join('\n').trim() || description;
 
     // Format content as Astro markdown with frontmatter
+    const tagName = tag.replace(/^#/, '');
     let markdown = `---\n`;
     markdown += `title: "${title}"\n`;
     markdown += `description: "${description}"\n`;
     markdown += `publishDate: "${latestDate}"\n`;
+    markdown += `tags: ["${tagName}"]\n`;
     markdown += `---\n\n`;
     markdown += body;
 
