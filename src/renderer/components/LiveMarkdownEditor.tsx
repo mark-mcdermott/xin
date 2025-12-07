@@ -283,11 +283,9 @@ function createDecorations(
           if (checkLine === '===') break; // End of block
           if (checkLine.match(/^published:\s*true/)) {
             isPublished = true;
-            console.log(`[createDecorations] Found published:true at line ${j}, isPublished=${isPublished}`);
             break;
           }
         }
-        console.log(`[createDecorations] Block at line ${i}, isPublished=${isPublished}`);
 
         // Skip decoration if this is the active line
         if (i !== activeLine) {
@@ -557,6 +555,8 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   const viewRef = useRef<EditorView | null>(null);
   const contentRef = useRef(initialContent);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Track the last initialContent we synced from, to detect actual external changes
+  const lastInitialContentRef = useRef(initialContent);
 
   // Store blogs in a ref for use in extensions
   const blogsRef = useRef(blogs);
@@ -823,19 +823,25 @@ tags: [""]
     };
   }, [getBlogBlockTemplate, blogCompletionSource, onPublishBlogBlock, blogs]);
 
-  // Update content when file changes
+  // Update content when file changes externally
   useEffect(() => {
-    if (viewRef.current && initialContent !== contentRef.current) {
-      const currentContent = viewRef.current.state.doc.toString();
-      if (currentContent !== initialContent) {
-        viewRef.current.dispatch({
-          changes: {
-            from: 0,
-            to: viewRef.current.state.doc.length,
-            insert: initialContent
-          }
-        });
-        contentRef.current = initialContent;
+    // Only sync if initialContent actually changed from its previous value (external change)
+    // This prevents reverting internal changes (like inserting published: true)
+    if (initialContent !== lastInitialContentRef.current) {
+      lastInitialContentRef.current = initialContent;
+
+      if (viewRef.current) {
+        const currentContent = viewRef.current.state.doc.toString();
+        if (currentContent !== initialContent) {
+          viewRef.current.dispatch({
+            changes: {
+              from: 0,
+              to: viewRef.current.state.doc.length,
+              insert: initialContent
+            }
+          });
+          contentRef.current = initialContent;
+        }
       }
     }
   }, [initialContent, filePath]);
@@ -900,16 +906,12 @@ tags: [""]
       // Publish!
       const success = await onPublishBlogBlock(blog.id, blockContent.trim());
 
-      console.log('Publish result:', success);
-
       if (success && viewRef.current) {
         // Get fresh document reference after async operation
         const freshDoc = viewRef.current.state.doc;
-        console.log('Fresh doc lines:', freshDoc.lines, 'blockLine:', blockLine);
 
         // Re-find the closing --- line in the fresh document
         const freshBoundaries = findBlogBlockBoundaries(freshDoc, freshDoc.line(blockLine).from);
-        console.log('Fresh boundaries:', freshBoundaries);
 
         if (freshBoundaries) {
           let freshClosingDashLine = -1;
@@ -918,7 +920,6 @@ tags: [""]
             const lineText = freshDoc.line(j).text.trim();
             if (lineText === '---') {
               dashCount++;
-              console.log(`Found --- #${dashCount} at line ${j}`);
               if (dashCount === 2) {
                 freshClosingDashLine = j;
                 break;
@@ -926,47 +927,23 @@ tags: [""]
             }
           }
 
-          console.log('Closing dash line:', freshClosingDashLine);
-
           if (freshClosingDashLine !== -1) {
             // Insert published: true before the closing ---
             const closingLine = freshDoc.line(freshClosingDashLine);
             const insertPos = closingLine.from;
             const insertText = 'published: true\n';
 
-            console.log('Inserting "published: true" at position:', insertPos);
             viewRef.current.dispatch({
               changes: { from: insertPos, to: insertPos, insert: insertText }
             });
-            console.log('Dispatch complete, new doc:', viewRef.current.state.doc.toString().substring(0, 500));
 
-            // Force decoration refresh by toggling active line
-            setTimeout(() => {
-              if (viewRef.current) {
-                // Set to -1 then back to current to force refresh
-                viewRef.current.dispatch({
-                  effects: setActiveLine.of(-1)
-                });
-                setTimeout(() => {
-                  if (viewRef.current) {
-                    const currentLine = viewRef.current.state.doc.lineAt(
-                      viewRef.current.state.selection.main.head
-                    ).number;
-                    viewRef.current.dispatch({
-                      effects: setActiveLine.of(currentLine)
-                    });
-                  }
-                }, 10);
-              }
-            }, 50);
+            // Update contentRef to prevent external sync from reverting
+            contentRef.current = viewRef.current.state.doc.toString();
 
-            // Trigger save
-            scheduleSave();
-          } else {
-            console.log('ERROR: Could not find closing --- line');
+            // Trigger save immediately (not debounced) to persist the change
+            const newContent = viewRef.current.state.doc.toString();
+            onSave(newContent);
           }
-        } else {
-          console.log('ERROR: Could not find block boundaries');
         }
       }
     };
