@@ -1,0 +1,13 @@
+directories:
+  output: release
+  buildResources: build
+appId: com.xun.notes
+productName: Xun
+files:
+  - filter:
+      - dist/**/*
+mac:
+  category: public.app-category.productivity
+  icon: build/icon.icns
+  target: dmg
+electronVersion: 39.2.5
