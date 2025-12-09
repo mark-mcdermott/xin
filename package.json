@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/main/index.js",
   "author": "",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -17,7 +17,23 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist node_modules/.vite",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "package": "npm run build && electron-builder --mac"
+  },
+  "build": {
+    "appId": "com.xin.notes",
+    "productName": "Xin",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "resources/icon.icns",
+      "target": "dmg"
+    }
   },
   "keywords": [
     "electron",
