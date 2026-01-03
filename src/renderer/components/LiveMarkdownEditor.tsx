@@ -7,7 +7,8 @@ import {
   WidgetType,
   ViewPlugin,
   ViewUpdate,
-  keymap
+  keymap,
+  drawSelection
 } from '@codemirror/view';
 import { markdown } from '@codemirror/lang-markdown';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
@@ -34,6 +35,7 @@ interface HeaderElement {
   to: number;
   markerFrom: number;
   markerTo: number;  // includes the space after #
+  isComplete: boolean;  // true if has space after #, false if just # or #text (tag-like)
 }
 
 interface ListElement {
@@ -263,17 +265,42 @@ function parseInlineElements(text: string, lineFrom: number): MarkdownElement[] 
 }
 
 function parseHeaderElement(text: string, lineFrom: number): HeaderElement | null {
-  const match = text.match(/^(#{1,6})\s+/);
-  if (match) {
+  // Complete header: # followed by space (standard markdown header)
+  const completeMatch = text.match(/^(#{1,6})\s+/);
+  if (completeMatch) {
     return {
       type: 'header',
-      level: match[1].length,
+      level: completeMatch[1].length,
       from: lineFrom,
       to: lineFrom + text.length,
       markerFrom: lineFrom,
-      markerTo: lineFrom + match[0].length
+      markerTo: lineFrom + completeMatch[0].length,
+      isComplete: true
     };
   }
+
+  // Incomplete header: just # at start of line (either just # or #text without space)
+  // This gives Obsidian-like instant feedback while typing
+  const incompleteMatch = text.match(/^(#{1,6})(?=\S|$)/);
+  if (incompleteMatch) {
+    // Check if this is actually a tag (# followed by word chars) - tags should be styled differently
+    const isTagLike = text.match(/^#{1}[a-zA-Z0-9_-]+$/);
+    if (isTagLike) {
+      // Single # followed immediately by text looks like a tag - don't treat as header
+      return null;
+    }
+
+    return {
+      type: 'header',
+      level: incompleteMatch[1].length,
+      from: lineFrom,
+      to: lineFrom + text.length,
+      markerFrom: lineFrom,
+      markerTo: lineFrom + incompleteMatch[1].length,
+      isComplete: false
+    };
+  }
+
   return null;
 }
 
@@ -578,15 +605,37 @@ function createDecorations(
     // Parse header
     const header = parseHeaderElement(lineText, line.from);
     if (header) {
-      // Apply header styling to the content (after marker)
-      decorations.push(
-        Decoration.mark({ class: `cm-header cm-header-${header.level}` }).range(header.markerTo, header.to)
-      );
-      // Hide the # markers unless cursor is in them
-      const cursorInMarker = cursorPos >= header.markerFrom && cursorPos <= header.markerTo;
-      if (!cursorInMarker) {
+      if (header.isComplete) {
+        // Complete header (# followed by space): apply header styling to content
+        if (header.markerTo < header.to) {
+          decorations.push(
+            Decoration.mark({ class: `cm-header cm-header-${header.level}` }).range(header.markerTo, header.to)
+          );
+        }
+        // Hide the # markers unless cursor is on this line (keep them visible while editing)
+        if (!cursorOnThisLine) {
+          decorations.push(
+            Decoration.mark({ class: 'cm-hidden-marker' }).range(header.markerFrom, header.markerTo)
+          );
+        } else {
+          // Cursor on line - show markers but style them as header
+          decorations.push(
+            Decoration.mark({ class: `cm-header cm-header-${header.level} cm-header-marker` }).range(header.markerFrom, header.markerTo)
+          );
+        }
+      } else {
+        // Incomplete header (just # or ## etc, or #text without space)
+        // Style the entire line as header-sized to give immediate feedback
+        // The # markers stay visible since it's incomplete
+        if (header.markerTo < header.to) {
+          // There's content after the #s - style it as header
+          decorations.push(
+            Decoration.mark({ class: `cm-header cm-header-${header.level}` }).range(header.markerTo, header.to)
+          );
+        }
+        // Style the # markers themselves too (visible but styled)
         decorations.push(
-          Decoration.mark({ class: 'cm-hidden-marker' }).range(header.markerFrom, header.markerTo)
+          Decoration.mark({ class: `cm-header cm-header-${header.level} cm-header-marker` }).range(header.markerFrom, header.markerTo)
         );
       }
     }
@@ -770,12 +819,12 @@ const editorTheme = EditorView.theme({
     overflow: 'auto'
   },
 
-  // Hidden markers
+  // Hidden markers - use color transparent to hide but preserve cursor position
   '.cm-hidden-marker': {
-    fontSize: '0',
-    width: '0',
-    display: 'inline-block',
-    overflow: 'hidden'
+    color: 'transparent',
+    fontSize: '0.01px',
+    letterSpacing: '-1em',
+    userSelect: 'none'
   },
 
   // Inline formatting styles
@@ -814,6 +863,10 @@ const editorTheme = EditorView.theme({
   // Header styles
   '.cm-header': {
     fontWeight: '700'
+  },
+  '.cm-header-marker': {
+    // Visible markers in incomplete headers - slightly muted
+    opacity: '0.6'
   },
   '.cm-header-1': {
     fontSize: '1.75em',
@@ -1186,6 +1239,7 @@ tags: [""]
       doc: initialContent,
       extensions: [
         cursorPositionField,
+        drawSelection({ cursorBlinkRate: 0 }), // Disable cursor blink to prevent disappearing
         history(),
         blogBlockKeymap,
         tabKeymap,
