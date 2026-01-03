@@ -314,11 +314,34 @@ code {
   color: var(--text-primary);
 }
 
-/* CodeMirror cursor styling */
+/* CodeMirror cursor styling - force visibility in all states */
 .cm-cursor,
 .cm-cursor-primary,
-.cm-cursorLayer .cm-cursor {
+.cm-cursorLayer .cm-cursor,
+.cm-editor .cm-cursor,
+.cm-editor.cm-focused .cm-cursor,
+.cm-focused .cm-cursor {
   border-left-color: var(--editor-cursor) !important;
+  border-left-width: 2px !important;
+  border-left-style: solid !important;
+  visibility: visible !important;
+  margin-left: 0 !important;
+  display: block !important;
+  opacity: 1 !important;
+}
+
+/* Force cursor layer to always be visible */
+.cm-cursorLayer {
+  visibility: visible !important;
+  display: block !important;
+  opacity: 1 !important;
+  animation: none !important;
+}
+
+/* Override any hiding of cursor layer */
+.cm-editor .cm-cursorLayer {
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* CodeMirror content caret color */
