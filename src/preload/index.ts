@@ -16,6 +16,13 @@ interface VaultResponse<T = any> {
   [key: string]: any;
 }
 
+export type Theme = 'light' | 'dark' | 'system';
+
+interface ThemeInfo {
+  theme: Theme;
+  effectiveTheme: 'light' | 'dark';
+}
+
 // Define the API that will be exposed to the renderer process
 export interface ElectronAPI {
   // Vault operations
@@ -58,6 +65,14 @@ export interface ElectronAPI {
     showFileMenu: (filePath: string) => Promise<{ action: string } | null>;
     showFolderMenu: (folderPath: string) => Promise<{ action: string } | null>;
     showSidebarMenu: () => Promise<{ action: string } | null>;
+  };
+
+  // Theme operations
+  theme: {
+    get: () => Promise<ThemeInfo>;
+    set: (theme: Theme) => Promise<{ success: boolean }>;
+    onChange: (callback: (info: ThemeInfo) => void) => void;
+    removeChangeListener: () => void;
   };
 
   // Publishing operations
@@ -113,6 +128,17 @@ const api: ElectronAPI = {
     showFileMenu: (filePath: string) => ipcRenderer.invoke('context-menu:show-file', filePath),
     showFolderMenu: (folderPath: string) => ipcRenderer.invoke('context-menu:show-folder', folderPath),
     showSidebarMenu: () => ipcRenderer.invoke('context-menu:show-sidebar')
+  },
+
+  theme: {
+    get: () => ipcRenderer.invoke('theme:get'),
+    set: (theme: Theme) => ipcRenderer.invoke('theme:set', theme),
+    onChange: (callback: (info: ThemeInfo) => void) => {
+      ipcRenderer.on('theme:changed', (_event, info) => callback(info));
+    },
+    removeChangeListener: () => {
+      ipcRenderer.removeAllListeners('theme:changed');
+    }
   },
 
   publish: {
