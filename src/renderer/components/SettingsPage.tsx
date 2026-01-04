@@ -189,8 +189,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = () => {
         const addResult = await window.electronAPI.vault.add(result.paths[0]);
         if (addResult.success) {
           await loadVaults();
-          // Reload to switch to new vault
-          window.location.reload();
         }
       } catch (error: any) {
         if (error.message?.includes('already exists')) {
