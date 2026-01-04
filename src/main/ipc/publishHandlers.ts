@@ -173,7 +173,8 @@ export function registerPublishHandlers(): void {
         progress: job.progress,
         steps: job.steps,
         error: job.error,
-        slug: (job as any).slug
+        slug: (job as any).slug,
+        postUrl: job.postUrl
       };
     } catch (error: any) {
       return { success: false, error: error.message };
@@ -193,7 +194,8 @@ export function registerPublishHandlers(): void {
           progress: job.progress,
           steps: job.steps,
           error: job.error,
-          slug: (job as any).slug
+          slug: (job as any).slug,
+          postUrl: job.postUrl
         });
 
         // Record timing when job completes
