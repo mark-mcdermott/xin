@@ -73,6 +73,7 @@ const App: React.FC = () => {
   const [blogBlockPublishProgress, setBlogBlockPublishProgress] = useState(0);
   const [blogBlockPublishSteps, setBlogBlockPublishSteps] = useState<Array<{ name: string; status: 'pending' | 'in_progress' | 'completed' | 'failed'; message?: string }>>([]);
   const [blogBlockPublishError, setBlogBlockPublishError] = useState<string | null>(null);
+  const [blogBlockPublishPostUrl, setBlogBlockPublishPostUrl] = useState<string | null>(null);
   const blogBlockPublishResolveRef = useRef<((result: { success: boolean; slug?: string }) => void) | null>(null);
 
   // Navigation history for back/forward
@@ -298,6 +299,9 @@ const App: React.FC = () => {
         setBlogBlockPublishSteps(data.steps || []);
         if (data.error) {
           setBlogBlockPublishError(data.error);
+        }
+        if (data.postUrl) {
+          setBlogBlockPublishPostUrl(data.postUrl);
         }
         // Resolve the promise when complete
         if (data.status === 'completed' || data.status === 'failed') {
@@ -878,6 +882,7 @@ const App: React.FC = () => {
     setBlogBlockPublishProgress(0);
     setBlogBlockPublishSteps([]);
     setBlogBlockPublishError(null);
+    setBlogBlockPublishPostUrl(null);
   };
 
   const handleUpdateTagContent = async (filePath: string, oldContent: string, newContent: string) => {
@@ -985,6 +990,7 @@ const App: React.FC = () => {
           progress={blogBlockPublishProgress}
           steps={blogBlockPublishSteps}
           error={blogBlockPublishError}
+          postUrl={blogBlockPublishPostUrl}
           onClose={handleCloseBlogBlockPublish}
         />
       )}
@@ -1072,7 +1078,7 @@ const App: React.FC = () => {
                   }}
                 >
                   <span className="flex items-center gap-2" style={{ fontSize: '13.5px', color: 'var(--tab-active-text)' }}>
-                    <Settings size={14} strokeWidth={1.5} />
+                    <Settings size={14} strokeWidth={1.5} style={{ marginRight: '5px' }} />
                     Settings
                   </span>
                   <button
@@ -1115,9 +1121,10 @@ const App: React.FC = () => {
           {/* <button className="p-2 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginBottom: '8px' }} title="Daily Notes" onClick={() => setSidebarTab('daily')}>
             <Calendar size={20} strokeWidth={1.5} />
           </button> */}
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginBottom: '8px' }} title="Today's Note" onClick={handleOpenTodayNote}>
+          <button className="p-2 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Today's Note" onClick={handleOpenTodayNote}>
             <FileText size={20} strokeWidth={1.5} />
           </button>
+          <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
           <button className="p-2 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginBottom: '8px' }} title="File Tree" onClick={() => setSidebarTab('files')}>
             <FolderTree size={20} strokeWidth={1.5} />
           </button>
@@ -1205,7 +1212,7 @@ const App: React.FC = () => {
               {/* <button className="p-1.5 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Help">
                 <HelpCircle size={16} strokeWidth={1.5} />
               </button> */}
-              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginRight: '8px' }} title="Settings" onClick={() => setShowSettings(true)}>
+              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginRight: '8px', outline: 'none' }} title="Settings" onClick={() => setShowSettings(true)}>
                 <Settings size={18} strokeWidth={1.5} />
               </button>
             </div>

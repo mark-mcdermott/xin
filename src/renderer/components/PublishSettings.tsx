@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 interface BlogTarget {
   id: string;
   name: string;
+  siteUrl?: string;
   github: {
     repo: string;
     branch: string;
@@ -52,6 +53,7 @@ export const PublishSettings: React.FC<PublishSettingsProps> = ({ onClose, vault
     setEditingBlog({
       id: crypto.randomUUID(),
       name: '',
+      siteUrl: '',
       github: {
         repo: '',
         branch: 'main',
@@ -183,6 +185,23 @@ export const PublishSettings: React.FC<PublishSettingsProps> = ({ onClose, vault
                 placeholder="My Blog"
                 required
               />
+            </div>
+
+            {/* Site URL */}
+            <div>
+              <label className="block text-sm font-medium text-obsidian-text-secondary mb-1">
+                Site URL
+              </label>
+              <input
+                type="text"
+                value={editingBlog.siteUrl || ''}
+                onChange={e => setEditingBlog({ ...editingBlog, siteUrl: e.target.value })}
+                className="w-full px-4 py-3 border border-obsidian-border rounded-lg bg-white text-obsidian-text placeholder-obsidian-text-muted focus:border-accent focus:ring-1 focus:ring-accent outline-none shadow-sm"
+                placeholder="https://yourblog.com"
+              />
+              <p className="text-xs text-obsidian-text-muted mt-1">
+                Base URL for your blog (used for post links after publishing)
+              </p>
             </div>
 
             {/* GitHub Config */}
