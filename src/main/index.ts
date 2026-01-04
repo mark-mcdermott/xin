@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeImage } from 'electron';
+import { app, BrowserWindow, nativeImage, ipcMain } from 'electron';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -17,6 +17,8 @@ import { registerPublishHandlers, initializePublishManagers, setPublishTagManage
 import { registerContextMenuHandlers } from './ipc/contextMenuHandlers';
 import { vaultManager } from './vault/VaultManager';
 import { TagManager } from './vault/TagManager';
+import { themeManager } from './ThemeManager';
+import { createApplicationMenu } from './menu';
 
 // ES modules equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -71,12 +73,27 @@ registerContextMenuHandlers();
 setTagManager(tagManager);
 setPublishTagManager(tagManager);
 
+// Theme IPC handlers
+ipcMain.handle('theme:get', () => ({
+  theme: themeManager.getTheme(),
+  effectiveTheme: themeManager.getEffectiveTheme()
+}));
+
+ipcMain.handle('theme:set', async (_event, theme: 'light' | 'dark' | 'system') => {
+  await themeManager.setTheme(theme);
+  return { success: true };
+});
+
 // Set app name (shows in menu bar on macOS)
 app.setName('Xin');
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows
 app.whenReady().then(async () => {
+  // Initialize theme manager and create menu
+  await themeManager.initialize();
+  createApplicationMenu();
+
   // Initialize vault before creating window
   try {
     await vaultManager.initialize();

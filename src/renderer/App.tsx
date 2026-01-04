@@ -210,6 +210,29 @@ const App: React.FC = () => {
     loadBlogs();
   }, []);
 
+  // Initialize theme and listen for changes
+  useEffect(() => {
+    const initTheme = async () => {
+      try {
+        const { effectiveTheme } = await window.electronAPI.theme.get();
+        document.documentElement.dataset.theme = effectiveTheme;
+      } catch (err) {
+        console.error('Failed to get theme:', err);
+      }
+    };
+
+    initTheme();
+
+    // Listen for theme changes from main process
+    window.electronAPI.theme.onChange(({ effectiveTheme }) => {
+      document.documentElement.dataset.theme = effectiveTheme;
+    });
+
+    return () => {
+      window.electronAPI.theme.removeChangeListener();
+    };
+  }, []);
+
   // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
