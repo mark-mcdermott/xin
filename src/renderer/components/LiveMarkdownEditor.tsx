@@ -450,6 +450,73 @@ class BlogBlockHeaderWidget extends WidgetType {
   }
 }
 
+// Widget for rocket icon at end of @ post line
+class AtPostRocketWidget extends WidgetType {
+  constructor(
+    readonly blockStartLine: number,
+    readonly blogName: string,
+    readonly isPublished: boolean
+  ) {
+    super();
+  }
+
+  toDOM() {
+    const wrapper = document.createElement('span');
+    wrapper.style.cssText = 'margin-left: 8px;';
+
+    const iconBtn = document.createElement('button');
+    iconBtn.className = 'cm-at-publish-btn';
+    const blockLine = this.blockStartLine;
+    const blogName = this.blogName;
+
+    if (this.isPublished) {
+      iconBtn.innerHTML = CHECK_CIRCLE_ICON_SVG;
+      iconBtn.title = 'Published - click to republish';
+      iconBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: inline-flex; align-items: center; color: #16a34a; vertical-align: middle;';
+      iconBtn.onmouseenter = () => { iconBtn.style.backgroundColor = '#f0f0f0'; };
+      iconBtn.onmouseleave = () => { iconBtn.style.backgroundColor = 'transparent'; };
+
+      iconBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        iconBtn.innerHTML = ROCKET_ICON_SVG;
+        iconBtn.title = 'Republish this blog post';
+        iconBtn.style.color = '#3f0c8d';
+        iconBtn.onclick = (e2) => {
+          e2.preventDefault();
+          e2.stopPropagation();
+          window.dispatchEvent(new CustomEvent('at-post-publish-click', {
+            detail: { blockLine, blogName }
+          }));
+        };
+      };
+    } else {
+      iconBtn.innerHTML = ROCKET_ICON_SVG;
+      iconBtn.title = 'Publish this blog post';
+      iconBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: inline-flex; align-items: center; color: #3f0c8d; vertical-align: middle;';
+      iconBtn.onmouseenter = () => { iconBtn.style.backgroundColor = '#f0f0f0'; };
+      iconBtn.onmouseleave = () => { iconBtn.style.backgroundColor = 'transparent'; };
+
+      iconBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.dispatchEvent(new CustomEvent('at-post-publish-click', {
+          detail: { blockLine, blogName }
+        }));
+      };
+    }
+
+    wrapper.appendChild(iconBtn);
+    return wrapper;
+  }
+
+  eq(other: AtPostRocketWidget) {
+    return other.blockStartLine === this.blockStartLine &&
+           other.blogName === this.blogName &&
+           other.isPublished === this.isPublished;
+  }
+}
+
 // Widget for @ blog post header (e.g., "@markmcdermott.io post")
 class AtPostHeaderWidget extends WidgetType {
   constructor(
@@ -686,17 +753,17 @@ function createDecorations(
           }
         }
 
-        // Show widget unless cursor is on this line
-        if (!cursorOnThisLine) {
+        // Style the line in gray italic and add rocket icon at the end
+        decorations.push(
+          Decoration.mark({ class: 'cm-at-field' }).range(line.from, line.to)
+        );
+        // Add rocket icon at end of line (only when cursor not on line)
+        if (!cursorOnThisLine && onPublish) {
           decorations.push(
-            Decoration.replace({
-              widget: new AtPostHeaderWidget(i, blogName, Boolean(onPublish), isPublished)
-            }).range(line.from, line.to)
-          );
-        } else {
-          // Cursor on line - show the @ and blog name in gray italic
-          decorations.push(
-            Decoration.mark({ class: 'cm-at-field' }).range(line.from, line.to)
+            Decoration.widget({
+              widget: new AtPostRocketWidget(i, blogName, isPublished),
+              side: 1
+            }).range(line.to)
           );
         }
         continue;
@@ -1280,14 +1347,14 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
 blog: ""
 title: ""
 subtitle: ""
-publishDate: "${today}"
+date: "${today}"
 tags: [""]
 ---
 `;
   }, []);
 
   // Available frontmatter fields for @ posts
-  const atPostFields = ['title', 'subtitle', 'publishDate', 'tags', 'slug', 'published'];
+  const atPostFields = ['title', 'subtitle', 'date', 'tags', 'slug', 'published'];
 
   // Helper to check if position is inside an @ post block
   const isInsideAtPost = useCallback((doc: Text, pos: number): { inside: boolean; blogName: string; startLine: number } => {
@@ -1509,7 +1576,7 @@ tags: [""]
             const currentLineText = currentLine.text;
 
             // Find all @ field lines in this @ post
-            const fieldOrder = ['title', 'subtitle', 'publishDate', 'tags', 'slug', 'published'];
+            const fieldOrder = ['title', 'subtitle', 'date', 'tags', 'slug', 'published'];
             const fieldLines: Record<string, number> = {};
             let atPostEndLine = doc.lines;
 
@@ -1918,8 +1985,8 @@ tags: [""]
             foundTitle = true;
           } else if (fieldName === 'subtitle') {
             frontmatter.subtitle = fieldValue.trim();
-          } else if (fieldName === 'publishDate') {
-            frontmatter.publishDate = fieldValue.trim();
+          } else if (fieldName === 'date') {
+            frontmatter.date = fieldValue.trim();
           } else if (fieldName === 'tags') {
             // Strip brackets and quotes - accept simple comma-separated tags
             let tagsValue = fieldValue.trim();
@@ -1945,14 +2012,15 @@ tags: [""]
       }
 
       // Build the content in standard frontmatter format
+      // Use defaults for required fields if not provided
+      const today = new Date().toISOString().split('T')[0];
+      const subtitle = frontmatter.subtitle || frontmatter.title;
+      const dateValue = frontmatter.date || today;
+
       let blockContent = '---\n';
       blockContent += `title: "${frontmatter.title}"\n`;
-      if (frontmatter.subtitle) {
-        blockContent += `subtitle: "${frontmatter.subtitle}"\n`;
-      }
-      if (frontmatter.publishDate) {
-        blockContent += `publishDate: "${frontmatter.publishDate}"\n`;
-      }
+      blockContent += `subtitle: "${subtitle}"\n`;
+      blockContent += `date: "${dateValue}"\n`;
       if (frontmatter.tags) {
         // Convert comma-separated tags to array format
         const tagArray = frontmatter.tags.split(',').map(t => t.trim()).filter(t => t);
