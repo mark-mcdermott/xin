@@ -1,1 +1,1 @@
-.llm/llm/root-context.md
+.llm/root-context.md
