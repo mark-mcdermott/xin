@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Plus, Trash2, Edit2 } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Edit2, Github, Cloud } from 'lucide-react';
 import { Button } from './Button';
 
 interface BlogTarget {
@@ -432,9 +432,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ vaultPath }) => {
                 >
                   <div>
                     <h3 className="font-medium" style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{blog.name}</h3>
-                    <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                      {blog.github.repo}{blog.cloudflare?.projectName ? ` → ${blog.cloudflare.projectName}` : ''}
-                    </p>
+                    <div className="flex items-center gap-1.5" style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      <Github size={13} strokeWidth={1.5} style={{ marginRight: '6px' }} />
+                      <span>{blog.github.repo}</span>
+                    </div>
+                    {blog.cloudflare?.projectName && (
+                      <div className="flex items-center gap-1.5" style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        <Cloud size={13} strokeWidth={1.5} style={{ marginRight: '6px' }} />
+                        <span>{blog.cloudflare.projectName}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <button

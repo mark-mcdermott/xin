@@ -5,6 +5,7 @@
 export interface BlogTarget {
   id: string;
   name: string;
+  siteUrl?: string; // e.g., "https://markmcdermott.io" - base URL for post links
   github: {
     repo: string; // e.g., "username/blog-repo"
     branch: string; // e.g., "main"
@@ -36,6 +37,7 @@ export interface PublishJob {
   completedAt?: number;
   error?: string;
   steps: PublishStep[];
+  postUrl?: string; // URL to the published post
 }
 
 export type PublishStatus =

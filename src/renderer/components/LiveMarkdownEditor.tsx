@@ -792,18 +792,29 @@ function createLivePreviewPlugin(
   return ViewPlugin.fromClass(
     class {
       decorations: DecorationSet;
+      lastSelectionLine: number;
 
       constructor(view: EditorView) {
         this.decorations = createDecorations(view, onPublish, blogs);
+        this.lastSelectionLine = view.state.doc.lineAt(view.state.selection.main.head).number;
       }
 
       update(update: ViewUpdate) {
-        if (
-          update.docChanged ||
-          update.selectionSet ||
-          update.viewportChanged
-        ) {
+        // Always rebuild on doc changes
+        if (update.docChanged) {
           this.decorations = createDecorations(update.view, onPublish, blogs);
+          this.lastSelectionLine = update.view.state.doc.lineAt(update.view.state.selection.main.head).number;
+          return;
+        }
+
+        // Only rebuild on selection changes if the cursor moved to a different line
+        // This prevents scroll jumps from unnecessary decoration rebuilds
+        if (update.selectionSet) {
+          const currentLine = update.view.state.doc.lineAt(update.view.state.selection.main.head).number;
+          if (currentLine !== this.lastSelectionLine) {
+            this.lastSelectionLine = currentLine;
+            this.decorations = createDecorations(update.view, onPublish, blogs);
+          }
         }
       }
     },
@@ -832,13 +843,34 @@ const editorTheme = EditorView.theme({
   },
   '.cm-cursor, .cm-cursor-primary': {
     borderLeftColor: 'var(--editor-cursor) !important',
-    borderLeftWidth: '2px !important'
+    borderLeftWidth: '2px !important',
+    visibility: 'visible !important',
+    opacity: '1 !important',
+    display: 'block !important'
   },
   '&.cm-focused .cm-cursor, &.cm-focused .cm-cursor-primary': {
-    borderLeftColor: 'var(--editor-cursor) !important'
+    borderLeftColor: 'var(--editor-cursor) !important',
+    visibility: 'visible !important',
+    opacity: '1 !important',
+    display: 'block !important'
+  },
+  '&:not(.cm-focused) .cm-cursor, &:not(.cm-focused) .cm-cursor-primary': {
+    borderLeftColor: 'var(--editor-cursor) !important',
+    visibility: 'visible !important',
+    opacity: '1 !important',
+    display: 'block !important'
+  },
+  '.cm-cursorLayer': {
+    visibility: 'visible !important',
+    opacity: '1 !important',
+    animation: 'none !important',
+    display: 'block !important'
   },
   '.cm-cursorLayer .cm-cursor': {
-    borderLeftColor: 'var(--editor-cursor) !important'
+    borderLeftColor: 'var(--editor-cursor) !important',
+    visibility: 'visible !important',
+    opacity: '1 !important',
+    display: 'block !important'
   },
   '.cm-selectionBackground': {
     backgroundColor: 'rgba(115, 115, 115, 0.3) !important'
@@ -1066,9 +1098,13 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   const contentRef = useRef(initialContent);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastInitialContentRef = useRef(initialContent);
+  const isSavingRef = useRef(false);
 
   const blogsRef = useRef(blogs);
   blogsRef.current = blogs;
+
+  const onPublishBlogBlockRef = useRef(onPublishBlogBlock);
+  onPublishBlogBlockRef.current = onPublishBlogBlock;
 
   // Generate blog block template
   const getBlogBlockTemplate = useCallback(() => {
@@ -1076,7 +1112,7 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
     return `---
 blog: ""
 title: ""
-description: ""
+subtitle: ""
 publishDate: "${today}"
 tags: [""]
 ---
@@ -1123,17 +1159,34 @@ tags: [""]
     };
   }, []);
 
-  // Debounced save
+  // Debounced save with scroll position preservation
   const scheduleSave = useCallback(() => {
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
-    autoSaveTimerRef.current = setTimeout(() => {
+    autoSaveTimerRef.current = setTimeout(async () => {
       if (viewRef.current) {
         const content = viewRef.current.state.doc.toString();
         if (content !== contentRef.current) {
+          // Set flag to prevent external content effect from running
+          isSavingRef.current = true;
           contentRef.current = content;
-          onSave(content);
+          lastInitialContentRef.current = content;
+
+          // Save scroll position and cursor before save
+          const scrollTop = viewRef.current.scrollDOM.scrollTop;
+          const cursorPos = viewRef.current.state.selection.main.head;
+
+          await onSave(content);
+
+          // Restore scroll position after save (state updates may have caused re-render)
+          requestAnimationFrame(() => {
+            if (viewRef.current) {
+              viewRef.current.scrollDOM.scrollTop = scrollTop;
+            }
+            // Clear flag after everything settles
+            isSavingRef.current = false;
+          });
         }
       }
     }, 2000);
@@ -1177,12 +1230,12 @@ tags: [""]
           const boundaries = findBlogBlockBoundaries(doc, pos);
           if (!boundaries) return false;
 
-          let blogLine = -1, titleLine = -1, descLine = -1, tagsLine = -1, closingDashLine = -1;
+          let blogLine = -1, titleLine = -1, subtitleLine = -1, tagsLine = -1, closingDashLine = -1;
           for (let i = boundaries.start + 1; i < boundaries.end; i++) {
             const text = doc.line(i).text;
             if (text.startsWith('blog:')) blogLine = i;
             else if (text.startsWith('title:')) titleLine = i;
-            else if (text.startsWith('description:')) descLine = i;
+            else if (text.startsWith('subtitle:')) subtitleLine = i;
             else if (text.startsWith('tags:')) tagsLine = i;
             else if (text.trim() === '---' && i > boundaries.start + 1) closingDashLine = i;
           }
@@ -1191,8 +1244,8 @@ tags: [""]
           if (lineText.startsWith('blog:')) {
             targetLine = titleLine;
           } else if (lineText.startsWith('title:')) {
-            targetLine = descLine;
-          } else if (lineText.startsWith('description:')) {
+            targetLine = subtitleLine;
+          } else if (lineText.startsWith('subtitle:')) {
             targetLine = tagsLine;
           } else if (lineText.startsWith('tags:')) {
             if (closingDashLine !== -1 && closingDashLine + 1 <= doc.lines) {
@@ -1235,10 +1288,23 @@ tags: [""]
           const lineText = line.text.trim();
 
           if (lineText === '===') {
+            // Count === lines before this one - if odd, this is a closing ===
+            let tripleEqualsCount = 0;
+            for (let i = 1; i < line.number; i++) {
+              if (doc.line(i).text.trim() === '===') {
+                tripleEqualsCount++;
+              }
+            }
+
+            // If odd number of === before this, then this is a closing === - just insert newline
+            if (tripleEqualsCount % 2 === 1) {
+              return false; // Let default Enter behavior handle it
+            }
+
             const template = getBlogBlockTemplate();
             const insertPos = line.to;
 
-            const fullInsert = '\n' + template + '===';
+            const fullInsert = '\n' + template + '===\n';
             const blogFieldOffset = template.indexOf('blog: "') + 7;
 
             view.dispatch({
@@ -1286,7 +1352,8 @@ tags: [""]
           activateOnTyping: true,
           defaultKeymap: true
         }),
-        createLivePreviewPlugin(onPublishBlogBlock, blogs),
+        // Pass stable boolean for hasPublish (actual callback is in ref)
+        createLivePreviewPlugin(onPublishBlogBlockRef.current ? () => {} : undefined, blogsRef.current),
         editorTheme,
         updateListener,
         EditorView.lineWrapping
@@ -1307,25 +1374,33 @@ tags: [""]
       }
       view.destroy();
     };
-  }, [getBlogBlockTemplate, blogCompletionSource, onPublishBlogBlock, blogs]);
+    // Note: onPublishBlogBlock and blogs are accessed via refs to avoid recreating editor
+  }, [getBlogBlockTemplate, blogCompletionSource]);
 
-  // Update content when file changes externally
+  // Update content when file changes externally (not from our own save)
   useEffect(() => {
-    if (initialContent !== lastInitialContentRef.current) {
-      lastInitialContentRef.current = initialContent;
+    // Skip if we're in the middle of saving - this prevents scroll jumps
+    if (isSavingRef.current) {
+      return;
+    }
 
-      if (viewRef.current) {
-        const currentContent = viewRef.current.state.doc.toString();
-        if (currentContent !== initialContent) {
-          viewRef.current.dispatch({
-            changes: {
-              from: 0,
-              to: viewRef.current.state.doc.length,
-              insert: initialContent
-            }
-          });
-          contentRef.current = initialContent;
-        }
+    // Only update if the content actually changed (compare values, not references)
+    if (viewRef.current) {
+      const currentContent = viewRef.current.state.doc.toString();
+      if (currentContent !== initialContent) {
+        // This is a genuine external change (e.g., file changed on disk)
+        lastInitialContentRef.current = initialContent;
+        viewRef.current.dispatch({
+          changes: {
+            from: 0,
+            to: viewRef.current.state.doc.length,
+            insert: initialContent
+          }
+        });
+        contentRef.current = initialContent;
+      } else {
+        // Content is the same, just update the ref to prevent future false positives
+        lastInitialContentRef.current = initialContent;
       }
     }
   }, [initialContent, filePath]);
@@ -1336,7 +1411,7 @@ tags: [""]
       const customEvent = e as CustomEvent<{ blockLine: number }>;
       const { blockLine } = customEvent.detail;
 
-      if (!viewRef.current || !onPublishBlogBlock) {
+      if (!viewRef.current || !onPublishBlogBlockRef.current) {
         return;
       }
 
@@ -1375,7 +1450,7 @@ tags: [""]
         return;
       }
 
-      const result = await onPublishBlogBlock(blog.id, blockContent.trim());
+      const result = await onPublishBlogBlockRef.current!(blog.id, blockContent.trim());
 
       if (result.success && viewRef.current) {
         const freshDoc = viewRef.current.state.doc;
@@ -1384,6 +1459,7 @@ tags: [""]
         if (freshBoundaries) {
           let freshClosingDashLine = -1;
           let existingSlugLine = -1;
+          let existingSlugValue = '';
           let existingPublishedLine = -1;
           let dashCount = 0;
 
@@ -1396,10 +1472,12 @@ tags: [""]
                 break;
               }
             }
-            if (lineText.startsWith('slug:')) {
+            const slugMatch = lineText.match(/^slug:\s*"([^"]*)"/);
+            if (slugMatch) {
               existingSlugLine = j;
+              existingSlugValue = slugMatch[1];
             }
-            if (lineText.startsWith('published:')) {
+            if (/^published:\s*true/.test(lineText)) {
               existingPublishedLine = j;
             }
           }
@@ -1407,8 +1485,8 @@ tags: [""]
           if (freshClosingDashLine !== -1) {
             const changes: Array<{ from: number; to: number; insert: string }> = [];
 
-            // Update or add slug
-            if (result.slug) {
+            // Update slug only if it changed
+            if (result.slug && result.slug !== existingSlugValue) {
               if (existingSlugLine !== -1) {
                 // Update existing slug line
                 const slugLine = freshDoc.line(existingSlugLine);
@@ -1428,32 +1506,23 @@ tags: [""]
               }
             }
 
-            // Update or add published: true
-            if (existingPublishedLine !== -1) {
-              // Update existing published line
-              const pubLine = freshDoc.line(existingPublishedLine);
-              changes.push({
-                from: pubLine.from,
-                to: pubLine.to,
-                insert: 'published: true'
-              });
-            } else {
+            // Add published: true only if not already present
+            if (existingPublishedLine === -1) {
               // Add new published line before closing ---
-              // Need to recalculate position after slug insertion
               const closingLine = freshDoc.line(freshClosingDashLine);
-              const offset = result.slug && existingSlugLine === -1 ? `slug: "${result.slug}"\n`.length : 0;
               changes.push({
-                from: closingLine.from + offset,
-                to: closingLine.from + offset,
+                from: closingLine.from,
+                to: closingLine.from,
                 insert: 'published: true\n'
               });
             }
 
-            // Apply all changes at once, sorted by position (descending to avoid offset issues)
-            changes.sort((a, b) => b.from - a.from);
-            for (const change of changes) {
+            // Only dispatch if there are changes to make
+            if (changes.length > 0) {
+              // Apply all changes in a single dispatch, sorted by position descending
+              changes.sort((a, b) => b.from - a.from);
               viewRef.current.dispatch({
-                changes: change
+                changes: changes
               });
             }
 
@@ -1470,7 +1539,8 @@ tags: [""]
     return () => {
       window.removeEventListener('blog-publish-click', handlePublishClick);
     };
-  }, [onPublishBlogBlock, scheduleSave]);
+    // onPublishBlogBlock accessed via ref to avoid re-registering listeners
+  }, [scheduleSave]);
 
   // Handle clicks on tags and links
   const handleClick = useCallback((e: React.MouseEvent) => {

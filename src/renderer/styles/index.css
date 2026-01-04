@@ -562,13 +562,14 @@ code {
   color: var(--text-primary);
 }
 
-/* CodeMirror cursor styling - force visibility in all states */
+/* CodeMirror cursor styling - force visibility in all states (focused or not) */
 .cm-cursor,
 .cm-cursor-primary,
 .cm-cursorLayer .cm-cursor,
 .cm-editor .cm-cursor,
 .cm-editor.cm-focused .cm-cursor,
-.cm-focused .cm-cursor {
+.cm-focused .cm-cursor,
+.cm-editor:not(.cm-focused) .cm-cursor {
   border-left-color: var(--editor-cursor) !important;
   border-left-width: 2px !important;
   border-left-style: solid !important;
@@ -576,18 +577,22 @@ code {
   margin-left: 0 !important;
   display: block !important;
   opacity: 1 !important;
+  animation: none !important;
 }
 
-/* Force cursor layer to always be visible */
-.cm-cursorLayer {
+/* Force cursor layer to always be visible even when editor not focused */
+.cm-cursorLayer,
+.cm-editor .cm-cursorLayer,
+.cm-editor:not(.cm-focused) .cm-cursorLayer {
   visibility: visible !important;
   display: block !important;
   opacity: 1 !important;
   animation: none !important;
+  pointer-events: none;
 }
 
-/* Override any hiding of cursor layer */
-.cm-editor .cm-cursorLayer {
+/* Ensure cursor never disappears */
+.cm-editor .cm-scroller .cm-cursorLayer {
   visibility: visible !important;
   opacity: 1 !important;
 }
@@ -681,4 +686,77 @@ input:focus, select:focus, textarea:focus {
 /* Override any default border colors */
 * {
   border-color: var(--border-primary);
+}
+
+/* ============================================================================
+   CodeMirror Autocomplete - shadcn-ui style
+   ============================================================================ */
+
+/* Autocomplete dropdown container */
+.cm-tooltip-autocomplete {
+  background-color: var(--dialog-bg) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+  padding: 4px !important;
+  overflow: hidden !important;
+}
+
+/* Autocomplete list */
+.cm-tooltip-autocomplete > ul {
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif !important;
+  max-height: 300px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Autocomplete items */
+.cm-tooltip-autocomplete > ul > li {
+  padding: 8px 12px !important;
+  margin: 2px 0 !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  color: var(--dialog-heading) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  line-height: 1.4 !important;
+}
+
+/* Autocomplete item hover */
+.cm-tooltip-autocomplete > ul > li:hover {
+  background-color: var(--sidebar-hover) !important;
+}
+
+/* Autocomplete selected item */
+.cm-tooltip-autocomplete > ul > li[aria-selected="true"],
+.cm-tooltip-autocomplete > ul > li.cm-completionSelected {
+  background-color: var(--sidebar-hover) !important;
+  color: var(--dialog-heading) !important;
+}
+
+/* Autocomplete item label - always purple */
+.cm-completionLabel {
+  flex: 1 !important;
+  font-weight: 500 !important;
+  color: var(--accent-primary) !important;
+}
+
+/* Autocomplete item detail/description */
+.cm-completionDetail {
+  font-size: 12px !important;
+  color: var(--text-muted) !important;
+  margin-left: 8px !important;
+}
+
+/* Autocomplete match highlighting - same as label */
+.cm-completionMatchedText {
+  color: var(--accent-primary) !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+}
+
+/* Hide the default icon area */
+.cm-completionIcon {
+  display: none !important;
 }

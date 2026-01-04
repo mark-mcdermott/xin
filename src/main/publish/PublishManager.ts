@@ -30,7 +30,7 @@ export class PublishManager {
     ];
 
     if (hasCloudflare) {
-      steps.push({ name: 'Waiting for deployment', status: 'pending' });
+      steps.push({ name: 'Waiting for Cloudflare deployment to finish', status: 'pending' });
     }
     steps.push({ name: 'Publish complete', status: 'pending' });
 
@@ -68,7 +68,7 @@ export class PublishManager {
     ];
 
     if (hasCloudflare) {
-      steps.push({ name: 'Waiting for deployment', status: 'pending' });
+      steps.push({ name: 'Waiting for Cloudflare deployment to finish', status: 'pending' });
     }
     steps.push({ name: 'Publish complete', status: 'pending' });
 
@@ -208,10 +208,15 @@ export class PublishManager {
 
       this.updateStepStatus(jobId, 1, 'completed', `Pushed commit ${commitSha.slice(0, 7)}`);
 
-      // Store slug in job for the renderer to retrieve
+      // Store slug and postUrl in job for the renderer to retrieve
       const job = this.jobs.get(jobId);
       if (job) {
         (job as any).slug = slug;
+        // Construct post URL if siteUrl is configured
+        if (blogTarget.siteUrl) {
+          const baseUrl = blogTarget.siteUrl.replace(/\/$/, ''); // Remove trailing slash
+          job.postUrl = `${baseUrl}/posts/${slug}`;
+        }
       }
 
       // Step 3: Wait for Cloudflare deployment (if configured)
@@ -277,11 +282,18 @@ export class PublishManager {
     const { repo, branch } = blogTarget.github;
     const { path: basePath, filename } = blogTarget.content;
 
-    // Sanitize title for filename (this is the new slug)
-    const newSlug = title
+    // Extract publishDate from frontmatter (format: YYYY-MM-DD)
+    const dateMatch = content.match(/publishDate:\s*"(\d{4}-\d{2}-\d{2})"/);
+    const publishDate = dateMatch?.[1] || new Date().toISOString().split('T')[0];
+
+    // Sanitize title for filename
+    const titleSlug = title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
+
+    // Full slug includes date prefix (YYYY-MM-DD-title-slug)
+    const newSlug = `${publishDate}-${titleSlug}`;
 
     // Check if there's an existing slug in the content (from previous publish)
     const slugMatch = content.match(/slug:\s*"([^"]*)"/);
@@ -363,23 +375,23 @@ export class PublishManager {
 
         // Parse frontmatter fields
         const titleMatch = frontmatter.match(/title:\s*"([^"]*)"/);
-        const descMatch = frontmatter.match(/description:\s*"([^"]*)"/);
+        const subtitleMatch = frontmatter.match(/subtitle:\s*"([^"]*)"/);
         const dateMatch = frontmatter.match(/publishDate:\s*"([^"]*)"/);
         const tagsMatch = frontmatter.match(/tags:\s*\[([^\]]*)\]/);
 
         const title = titleMatch?.[1] || tag.replace(/^#/, '');
-        const description = descMatch?.[1] || `Notes for ${tag}`;
+        const subtitle = subtitleMatch?.[1] || `Notes for ${tag}`;
         const publishDate = dateMatch?.[1] || new Date().toISOString().split('T')[0];
         const tags = tagsMatch?.[1] || `"${tag.replace(/^#/, '')}"`;
 
         // Build final markdown with extracted frontmatter
         let markdown = `---\n`;
         markdown += `title: "${title}"\n`;
-        markdown += `description: "${description}"\n`;
+        markdown += `subtitle: "${subtitle}"\n`;
         markdown += `publishDate: "${publishDate}"\n`;
         markdown += `tags: [${tags}]\n`;
         markdown += `---\n\n`;
-        markdown += body || description;
+        markdown += body || subtitle;
 
         console.log('PublishManager: prepared markdown from blog block:', markdown.substring(0, 100));
         return markdown;
@@ -392,23 +404,23 @@ export class PublishManager {
     // Get the most recent date for publishDate
     const latestDate = content[0]?.date || new Date().toISOString().split('T')[0];
 
-    // Split into lines and extract title/description
+    // Split into lines and extract title/subtitle
     const lines = allContent.split('\n');
     const title = lines[0]?.trim() || tag.replace(/^#/, '');
-    const description = lines[1]?.trim() || `Notes for ${tag}`;
+    const subtitle = lines[1]?.trim() || `Notes for ${tag}`;
 
     // Body starts after the first two lines and any blank lines
     let bodyStartIndex = 2;
     while (bodyStartIndex < lines.length && !lines[bodyStartIndex].trim()) {
       bodyStartIndex++;
     }
-    const body = lines.slice(bodyStartIndex).join('\n').trim() || description;
+    const body = lines.slice(bodyStartIndex).join('\n').trim() || subtitle;
 
     // Format content as Astro markdown with frontmatter
     const tagName = tag.replace(/^#/, '');
     let markdown = `---\n`;
     markdown += `title: "${title}"\n`;
-    markdown += `description: "${description}"\n`;
+    markdown += `subtitle: "${subtitle}"\n`;
     markdown += `publishDate: "${latestDate}"\n`;
     markdown += `tags: ["${tagName}"]\n`;
     markdown += `---\n\n`;

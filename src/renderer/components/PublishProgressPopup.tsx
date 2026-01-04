@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { X } from 'lucide-react';
 
 interface PublishStep {
   name: string;
@@ -13,6 +14,7 @@ interface PublishProgressPopupProps {
   progress: number;
   steps: PublishStep[];
   error: string | null;
+  postUrl?: string | null;
   onClose: () => void;
 }
 
@@ -20,6 +22,7 @@ export const PublishProgressPopup: React.FC<PublishProgressPopupProps> = ({
   status,
   steps,
   error,
+  postUrl,
   onClose
 }) => {
   const [estimatedTimeMs, setEstimatedTimeMs] = useState(30000); // Default 30 seconds
@@ -98,8 +101,6 @@ export const PublishProgressPopup: React.FC<PublishProgressPopupProps> = ({
     return status.charAt(0).toUpperCase() + status.slice(1) + '...';
   };
 
-  const canClose = status === 'completed' || status === 'failed';
-
   // Format elapsed time
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
@@ -115,105 +116,108 @@ export const PublishProgressPopup: React.FC<PublishProgressPopupProps> = ({
     <div
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'var(--dialog-backdrop)',
-        zIndex: 9999
+        top: '55px',
+        right: '12px',
+        width: '160px',
+        backgroundColor: 'var(--dialog-bg)',
+        border: '1px solid var(--border-light)',
+        boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.12)',
+        padding: '8px',
+        borderRadius: '6px',
+        zIndex: 9999,
+        pointerEvents: 'auto'
       }}
-      onClick={() => canClose && onClose()}
     >
+      {/* Header with title and close button */}
+      <div className="flex items-center justify-between" style={{ marginBottom: '4px' }}>
+        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--dialog-heading)' }}>
+          {status === 'completed' ? 'Published!' : status === 'failed' ? 'Failed' : 'Publishing...'}
+        </span>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: '2px',
+            cursor: 'pointer',
+            color: 'var(--text-muted)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '2px'
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--btn-secondary-hover)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+        >
+          <X size={8} />
+        </button>
+      </div>
+
+      {/* Progress bar */}
       <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '400px',
-          backgroundColor: 'var(--dialog-bg)',
-          border: '1px solid var(--border-light)',
-          boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)',
-          padding: '24px',
-          borderRadius: '12px'
-        }}
+        className="w-full rounded-full overflow-hidden"
+        style={{ backgroundColor: 'var(--progress-bg)', height: '3px', marginBottom: '3px' }}
       >
-        <h2 className="font-semibold mb-4" style={{ fontSize: '18px', color: 'var(--dialog-heading)' }}>
-          Publishing Blog Post
-        </h2>
+        <div
+          className="rounded-full"
+          style={{
+            width: `${Math.max(displayProgress, 2)}%`,
+            height: '3px',
+            backgroundColor:
+              status === 'failed' ? 'var(--status-error)' : status === 'completed' ? 'var(--status-success)' : 'var(--progress-fill)',
+            transition: status === 'completed' ? 'width 0.3s ease-out' : 'none'
+          }}
+        />
+      </div>
 
-        <div className="mb-4">
-          {/* Progress bar */}
-          <div
-            className="w-full rounded-full overflow-hidden"
-            style={{ backgroundColor: 'var(--progress-bg)', height: '8px' }}
+      {/* Current status message */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <p
+            style={{
+              fontSize: '12px',
+              color: status === 'failed' ? 'var(--status-error)' : status === 'completed' ? 'var(--status-success)' : 'var(--dialog-text)'
+            }}
           >
-            <div
-              className="rounded-full"
-              style={{
-                width: `${Math.max(displayProgress, 2)}%`,
-                height: '8px',
-                backgroundColor:
-                  status === 'failed' ? 'var(--status-error)' : status === 'completed' ? 'var(--status-success)' : 'var(--progress-fill)',
-                transition: status === 'completed' ? 'width 0.3s ease-out' : 'none'
-              }}
-            />
-          </div>
-          <div style={{ height: '12px' }} />
-
-          {/* Current status message */}
-          <div className="flex items-center justify-between">
-            <p
-              style={{
-                fontSize: '14px',
-                color: status === 'failed' ? 'var(--status-error)' : status === 'completed' ? 'var(--status-success)' : 'var(--dialog-text)'
-              }}
-            >
-              {status === 'completed' ? 'Published successfully!' : status === 'failed' ? 'Failed' : getCurrentStepMessage()}
-            </p>
-            {status !== 'completed' && status !== 'failed' && (
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                {formatTime(elapsedMs)}
-              </span>
-            )}
-          </div>
-
-          {error && (
-            <div
-              className="mt-4 p-3 rounded-lg"
-              style={{
-                backgroundColor: 'var(--status-error-bg)',
-                border: '1px solid var(--status-error-border)'
-              }}
-            >
-              <p style={{ fontSize: '14px', color: 'var(--status-error)' }}>{error}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end">
-          {canClose && (
+            {status === 'completed' ? 'Success!' : status === 'failed' ? 'Failed' : getCurrentStepMessage()}
+          </p>
+          {status === 'completed' && postUrl && (
             <button
-              onClick={onClose}
-              className="transition-colors"
+              onClick={() => window.electronAPI.shell.openExternal(postUrl)}
               style={{
-                padding: '11px 20px',
-                fontSize: '14px',
-                fontWeight: 700,
-                color: 'var(--btn-secondary-text)',
-                backgroundColor: 'var(--btn-secondary-bg)',
-                border: '1px solid var(--btn-secondary-border)',
-                borderRadius: '8px',
-                boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.06)'
+                fontSize: '12px',
+                color: 'var(--accent-primary)',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                textDecoration: 'underline'
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--btn-secondary-hover)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--btn-secondary-bg)')}
             >
-              Close
+              View post
             </button>
           )}
         </div>
+        {status !== 'completed' && status !== 'failed' && (
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+            {formatTime(elapsedMs)}
+          </span>
+        )}
       </div>
+
+      {error && (
+        <div
+          style={{
+            marginTop: '4px',
+            padding: '3px',
+            borderRadius: '2px',
+            backgroundColor: 'var(--status-error-bg)',
+            border: '1px solid var(--status-error-border)'
+          }}
+        >
+          <p style={{ fontSize: '5px', color: 'var(--status-error)' }}>{error}</p>
+        </div>
+      )}
     </div>
   );
 };

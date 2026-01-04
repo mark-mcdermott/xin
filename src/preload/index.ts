@@ -25,6 +25,11 @@ interface ThemeInfo {
 
 // Define the API that will be exposed to the renderer process
 export interface ElectronAPI {
+  // Shell operations
+  shell: {
+    openExternal: (url: string) => Promise<void>;
+  };
+
   // Vault operations
   vault: {
     initialize: (vaultPath?: string) => Promise<VaultResponse<{ path: string }>>;
@@ -95,6 +100,10 @@ export interface ElectronAPI {
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 const api: ElectronAPI = {
+  shell: {
+    openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)
+  },
+
   vault: {
     initialize: (vaultPath?: string) => ipcRenderer.invoke('vault:initialize', vaultPath),
     getPath: () => ipcRenderer.invoke('vault:get-path'),

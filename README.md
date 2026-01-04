@@ -47,7 +47,7 @@ Type `===` and press Enter to insert a blog post template:
 ---
 blog: ""
 title: ""
-description: ""
+subtitle: ""
 publishDate: "2026-01-03"
 tags: [""]
 ---
@@ -62,7 +62,7 @@ Your blog content here...
 |-------|-------------|
 | `blog` | Name of the blog to publish to (must match a blog configured in Settings) |
 | `title` | Post title - also determines the filename (e.g., "My Post" → `my-post.md`) |
-| `description` | Short description for SEO/previews |
+| `subtitle` | Short subtitle for SEO/previews |
 | `publishDate` | Publication date in YYYY-MM-DD format (auto-filled with today's date) |
 | `tags` | Array of tags for the post |
 | `slug` | Auto-set after publish - tracks filename for rename detection |

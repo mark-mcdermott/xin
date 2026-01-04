@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeImage, ipcMain } from 'electron';
+import { app, BrowserWindow, nativeImage, ipcMain, shell } from 'electron';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -82,6 +82,11 @@ ipcMain.handle('theme:get', () => ({
 ipcMain.handle('theme:set', async (_event, theme: 'light' | 'dark' | 'system') => {
   await themeManager.setTheme(theme);
   return { success: true };
+});
+
+// Shell IPC handler - open URLs in default browser
+ipcMain.handle('shell:open-external', async (_event, url: string) => {
+  await shell.openExternal(url);
 });
 
 // Set app name (shows in menu bar on macOS)
