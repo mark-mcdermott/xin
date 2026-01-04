@@ -1916,7 +1916,13 @@ tags: [""]
           } else if (fieldName === 'publishDate') {
             frontmatter.publishDate = fieldValue.trim();
           } else if (fieldName === 'tags') {
-            frontmatter.tags = fieldValue.trim();
+            // Strip brackets and quotes - accept simple comma-separated tags
+            let tagsValue = fieldValue.trim();
+            if (tagsValue.startsWith('[') && tagsValue.endsWith(']')) {
+              tagsValue = tagsValue.slice(1, -1);
+            }
+            tagsValue = tagsValue.replace(/"/g, '');
+            frontmatter.tags = tagsValue;
           } else if (fieldName === 'slug') {
             frontmatter.slug = fieldValue.trim();
           } else if (fieldName === 'published') {

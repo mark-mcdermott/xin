@@ -68,7 +68,7 @@ Your blog content here...
 | `slug` | Auto-set after publish - tracks filename for rename detection |
 | `published` | Auto-set to `true` after successful publish |
 
-### Tag Format
+### Tag Format (Standard Frontmatter)
 
 Tags use YAML array format with quoted strings:
 
@@ -82,6 +82,46 @@ tags: ["how to", "tutorial"]      # two tags, first has a space
 - Each quoted string is one tag
 - Commas separate tags (spaces after commas are optional)
 - Quotes preserve spaces for multi-word tags
+
+### @ Post Format (Alternative)
+
+Instead of the `=== ... ===` block format, you can use the @ decorator format for a more compact syntax:
+
+```markdown
+@myblog post
+@title My Blog Post Title
+@subtitle A short description
+@tags javascript, react, webdev
+@publishDate 2026-01-04
+
+Your blog content here...
+---
+```
+
+#### @ Decorator Fields
+
+| Field | Description |
+|-------|-------------|
+| `@blogname post` | Start a post for the named blog (must match Settings) |
+| `@title` | Post title (required) |
+| `@subtitle` | Short subtitle for SEO/previews |
+| `@publishDate` | Publication date (YYYY-MM-DD). If omitted, uses current date |
+| `@tags` | Comma-separated list of tags (one word each, spaces ignored) |
+| `@slug` | Auto-set after publish |
+| `@published` | Auto-set to `true` after successful publish |
+
+#### @ Tags Format
+
+The `@tags` field accepts a simple comma-separated list:
+
+```markdown
+@tags javascript, react, tutorial
+```
+
+- Tags are separated by commas
+- Spaces around tags are ignored
+- Only single-word tags are supported
+- Square brackets and quotes are optional and will be stripped
 
 ### Publishing Workflow
 

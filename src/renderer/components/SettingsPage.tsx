@@ -423,12 +423,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ vaultPath }) => {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {blogs.map(blog => (
                 <div
                   key={blog.id}
                   className="flex items-center justify-between transition-shadow hover:shadow-md"
-                  style={{ padding: '12px 20px 16px 20px', border: '1px solid var(--input-border)', backgroundColor: 'var(--bg-primary)', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.06)', borderRadius: '8px' }}
+                  style={{ padding: '2px 20px 16px 20px', border: '1px solid var(--input-border)', backgroundColor: 'var(--bg-primary)', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.06)', borderRadius: '8px', marginBottom: '12px' }}
                 >
                   <div>
                     <h3 className="font-medium" style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{blog.name}</h3>

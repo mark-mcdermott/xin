@@ -255,6 +255,9 @@ export const PublishSettings: React.FC<PublishSettingsProps> = ({ onClose, vault
                     className="w-full px-4 py-3 border border-obsidian-border rounded-lg bg-white text-obsidian-text placeholder-obsidian-text-muted focus:border-accent focus:ring-1 focus:ring-accent outline-none shadow-sm"
                     placeholder="ghp_..."
                   />
+                  <p className="mt-1 text-xs text-obsidian-text-muted">
+                    Fine-grained: <code className="bg-gray-100 px-1 rounded">contents: read/write</code> · Classic: <code className="bg-gray-100 px-1 rounded">repo</code>
+                  </p>
                 </div>
               </div>
             </div>
@@ -422,7 +425,7 @@ export const PublishSettings: React.FC<PublishSettingsProps> = ({ onClose, vault
           </button>
         </div>
 
-        <div className="space-y-3 mb-4">
+        <div className="space-y-4 mb-4">
           {blogs.map(blog => (
             <div
               key={blog.id}

@@ -261,6 +261,16 @@ export class PublishManager {
 
     // If content starts with ---, it's already frontmatter
     if (rawContent.trim().startsWith('---')) {
+      // Check if publishDate is missing and add current date if so
+      const hasPublishDate = /publishDate:\s*"/.test(rawContent);
+      if (!hasPublishDate) {
+        const today = new Date().toISOString().split('T')[0];
+        // Insert publishDate after the opening ---
+        return rawContent.replace(
+          /^(---\s*\n)/,
+          `$1publishDate: "${today}"\n`
+        );
+      }
       return rawContent;
     }
 

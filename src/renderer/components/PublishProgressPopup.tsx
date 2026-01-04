@@ -149,7 +149,7 @@ export const PublishProgressPopup: React.FC<PublishProgressPopupProps> = ({
           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--btn-secondary-hover)')}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
         >
-          <X size={8} />
+          <X size={16} />
         </button>
       </div>
 
