@@ -261,14 +261,14 @@ export class PublishManager {
 
     // If content starts with ---, it's already frontmatter
     if (rawContent.trim().startsWith('---')) {
-      // Check if publishDate is missing and add current date if so
-      const hasPublishDate = /publishDate:\s*"/.test(rawContent);
-      if (!hasPublishDate) {
+      // Check if date field is missing and add current date if so
+      const hasDate = /\bdate:\s*"/.test(rawContent);
+      if (!hasDate) {
         const today = new Date().toISOString().split('T')[0];
-        // Insert publishDate after the opening ---
+        // Insert date after the opening ---
         return rawContent.replace(
           /^(---\s*\n)/,
-          `$1publishDate: "${today}"\n`
+          `$1date: "${today}"\n`
         );
       }
       return rawContent;
@@ -292,9 +292,9 @@ export class PublishManager {
     const { repo, branch } = blogTarget.github;
     const { path: basePath, filename } = blogTarget.content;
 
-    // Extract publishDate from frontmatter (format: YYYY-MM-DD)
-    const dateMatch = content.match(/publishDate:\s*"(\d{4}-\d{2}-\d{2})"/);
-    const publishDate = dateMatch?.[1] || new Date().toISOString().split('T')[0];
+    // Extract date from frontmatter (format: YYYY-MM-DD)
+    const dateMatch = content.match(/\bdate:\s*"(\d{4}-\d{2}-\d{2})"/);
+    const dateValue = dateMatch?.[1] || new Date().toISOString().split('T')[0];
 
     // Sanitize title for filename
     const titleSlug = title
@@ -303,7 +303,7 @@ export class PublishManager {
       .replace(/^-|-$/g, '');
 
     // Full slug includes date prefix (YYYY-MM-DD-title-slug)
-    const newSlug = `${publishDate}-${titleSlug}`;
+    const newSlug = `${dateValue}-${titleSlug}`;
 
     // Check if there's an existing slug in the content (from previous publish)
     const slugMatch = content.match(/slug:\s*"([^"]*)"/);
@@ -386,19 +386,19 @@ export class PublishManager {
         // Parse frontmatter fields
         const titleMatch = frontmatter.match(/title:\s*"([^"]*)"/);
         const subtitleMatch = frontmatter.match(/subtitle:\s*"([^"]*)"/);
-        const dateMatch = frontmatter.match(/publishDate:\s*"([^"]*)"/);
+        const dateMatch = frontmatter.match(/date:\s*"([^"]*)"/);
         const tagsMatch = frontmatter.match(/tags:\s*\[([^\]]*)\]/);
 
         const title = titleMatch?.[1] || tag.replace(/^#/, '');
         const subtitle = subtitleMatch?.[1] || `Notes for ${tag}`;
-        const publishDate = dateMatch?.[1] || new Date().toISOString().split('T')[0];
+        const dateValue = dateMatch?.[1] || new Date().toISOString().split('T')[0];
         const tags = tagsMatch?.[1] || `"${tag.replace(/^#/, '')}"`;
 
         // Build final markdown with extracted frontmatter
         let markdown = `---\n`;
         markdown += `title: "${title}"\n`;
         markdown += `subtitle: "${subtitle}"\n`;
-        markdown += `publishDate: "${publishDate}"\n`;
+        markdown += `date: "${dateValue}"\n`;
         markdown += `tags: [${tags}]\n`;
         markdown += `---\n\n`;
         markdown += body || subtitle;
@@ -411,7 +411,7 @@ export class PublishManager {
     // Fallback: Legacy format without === blocks
     console.log('PublishManager: Using legacy format (no === block found)');
 
-    // Get the most recent date for publishDate
+    // Get the most recent date for the post
     const latestDate = content[0]?.date || new Date().toISOString().split('T')[0];
 
     // Split into lines and extract title/subtitle
@@ -431,7 +431,7 @@ export class PublishManager {
     let markdown = `---\n`;
     markdown += `title: "${title}"\n`;
     markdown += `subtitle: "${subtitle}"\n`;
-    markdown += `publishDate: "${latestDate}"\n`;
+    markdown += `date: "${latestDate}"\n`;
     markdown += `tags: ["${tagName}"]\n`;
     markdown += `---\n\n`;
     markdown += body;
