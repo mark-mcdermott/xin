@@ -16,6 +16,14 @@ interface VaultResponse<T = any> {
   [key: string]: any;
 }
 
+export interface VaultEntry {
+  id: string;
+  name: string;
+  path: string;
+  dailyNotesPath: string;
+  createdAt: string;
+}
+
 export type Theme = 'light' | 'dark' | 'system';
 
 interface ThemeInfo {
@@ -30,10 +38,21 @@ export interface ElectronAPI {
     openExternal: (url: string) => Promise<void>;
   };
 
+  // Dialog operations
+  dialog: {
+    showOpenDialog: (options: {
+      title?: string;
+      defaultPath?: string;
+      properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'createDirectory'>;
+    }) => Promise<{ success: boolean; paths?: string[]; canceled?: boolean }>;
+  };
+
   // Vault operations
   vault: {
     initialize: (vaultPath?: string) => Promise<VaultResponse<{ path: string }>>;
     getPath: () => Promise<VaultResponse<{ path: string | null }>>;
+    getDefaultPath: () => Promise<VaultResponse<{ path: string }>>;
+    isFirstRun: () => Promise<VaultResponse<{ isFirstRun: boolean }>>;
     getFiles: () => Promise<VaultResponse<{ tree: FileNode }>>;
     readFile: (path: string) => Promise<VaultResponse<{ content: string }>>;
     writeFile: (path: string, content: string) => Promise<VaultResponse>;
@@ -49,6 +68,13 @@ export interface ElectronAPI {
       VaultResponse<{ path: string; content: string; isNew: boolean }>
     >;
     getDailyNoteDates: () => Promise<VaultResponse<{ dates: string[] }>>;
+    // Multi-vault operations
+    getAll: () => Promise<VaultResponse<{ vaults: VaultEntry[]; activeVaultId: string | null }>>;
+    add: (vaultPath: string) => Promise<VaultResponse<{ vault: VaultEntry }>>;
+    switch: (vaultId: string) => Promise<VaultResponse<{ path: string }>>;
+    update: (vaultId: string, updates: { name?: string; path?: string }) => Promise<VaultResponse<{ vault: VaultEntry }>>;
+    remove: (vaultId: string) => Promise<VaultResponse>;
+    delete: (vaultId: string) => Promise<VaultResponse>;
   };
 
   // Tag operations
@@ -104,9 +130,15 @@ const api: ElectronAPI = {
     openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)
   },
 
+  dialog: {
+    showOpenDialog: (options) => ipcRenderer.invoke('dialog:show-open', options)
+  },
+
   vault: {
     initialize: (vaultPath?: string) => ipcRenderer.invoke('vault:initialize', vaultPath),
     getPath: () => ipcRenderer.invoke('vault:get-path'),
+    getDefaultPath: () => ipcRenderer.invoke('vault:get-default-path'),
+    isFirstRun: () => ipcRenderer.invoke('vault:is-first-run'),
     getFiles: () => ipcRenderer.invoke('vault:get-files'),
     readFile: (path: string) => ipcRenderer.invoke('vault:read-file', path),
     writeFile: (path: string, content: string) =>
@@ -121,7 +153,15 @@ const api: ElectronAPI = {
       ipcRenderer.invoke('vault:rename-file', oldPath, newName),
     getTodayNote: () => ipcRenderer.invoke('vault:get-today-note'),
     getDailyNote: (date: string) => ipcRenderer.invoke('vault:get-daily-note', date),
-    getDailyNoteDates: () => ipcRenderer.invoke('vault:get-daily-note-dates')
+    getDailyNoteDates: () => ipcRenderer.invoke('vault:get-daily-note-dates'),
+    // Multi-vault operations
+    getAll: () => ipcRenderer.invoke('vault:get-all'),
+    add: (vaultPath: string) => ipcRenderer.invoke('vault:add', vaultPath),
+    switch: (vaultId: string) => ipcRenderer.invoke('vault:switch', vaultId),
+    update: (vaultId: string, updates: { name?: string; path?: string }) =>
+      ipcRenderer.invoke('vault:update', vaultId, updates),
+    remove: (vaultId: string) => ipcRenderer.invoke('vault:remove', vaultId),
+    delete: (vaultId: string) => ipcRenderer.invoke('vault:delete', vaultId)
   },
 
   tags: {

@@ -1,4 +1,6 @@
-import { ipcMain } from 'electron';
+import { ipcMain, dialog } from 'electron';
+import { app } from 'electron';
+import { join } from 'path';
 import { vaultManager } from '../vault/VaultManager';
 
 /**
@@ -19,6 +21,40 @@ export function registerVaultHandlers(): void {
   ipcMain.handle('vault:get-path', async () => {
     const path = vaultManager.getVaultPath();
     return { success: true, path };
+  });
+
+  // Get default vault path
+  ipcMain.handle('vault:get-default-path', async () => {
+    const path = join(app.getPath('documents'), 'XunVaults', 'Xun');
+    return { success: true, path };
+  });
+
+  // Check if first run (no existing config)
+  ipcMain.handle('vault:is-first-run', async () => {
+    const isFirstRun = await vaultManager.isFirstRun();
+    return { success: true, isFirstRun };
+  });
+
+  // Show open dialog for folder selection
+  ipcMain.handle('dialog:show-open', async (_event, options: {
+    title?: string;
+    defaultPath?: string;
+    properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'createDirectory'>;
+  }) => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: options.title,
+        defaultPath: options.defaultPath,
+        properties: options.properties as any
+      });
+      return {
+        success: true,
+        paths: result.filePaths,
+        canceled: result.canceled
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
   });
 
   // Get file tree
@@ -126,6 +162,67 @@ export function registerVaultHandlers(): void {
     try {
       const dates = await vaultManager.getDailyNoteDates();
       return { success: true, dates };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Get all configured vaults
+  ipcMain.handle('vault:get-all', async () => {
+    try {
+      const vaults = await vaultManager.getAllVaults();
+      const activeVaultId = await vaultManager.getActiveVaultId();
+      return { success: true, vaults, activeVaultId };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Add a new vault
+  ipcMain.handle('vault:add', async (_event, vaultPath: string) => {
+    try {
+      const vault = await vaultManager.addVault(vaultPath);
+      return { success: true, vault };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Switch to a different vault
+  ipcMain.handle('vault:switch', async (_event, vaultId: string) => {
+    try {
+      const path = await vaultManager.switchVault(vaultId);
+      return { success: true, path };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Update a vault
+  ipcMain.handle('vault:update', async (_event, vaultId: string, updates: { name?: string; path?: string }) => {
+    try {
+      const vault = await vaultManager.updateVault(vaultId, updates);
+      return { success: true, vault };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Remove a vault from config (doesn't delete files)
+  ipcMain.handle('vault:remove', async (_event, vaultId: string) => {
+    try {
+      await vaultManager.removeVault(vaultId);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Delete a vault and all its files
+  ipcMain.handle('vault:delete', async (_event, vaultId: string) => {
+    try {
+      await vaultManager.deleteVault(vaultId);
+      return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
     }

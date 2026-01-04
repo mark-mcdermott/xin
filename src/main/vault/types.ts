@@ -2,10 +2,21 @@
  * Vault-related type definitions
  */
 
+export interface VaultEntry {
+  id: string;
+  name: string;
+  path: string;
+  dailyNotesPath: string;
+  createdAt: string;
+}
+
 export interface VaultConfig {
   vaultPath: string;
   lastOpened: string;
   dailyNotesPath: string;
+  // Multi-vault support
+  vaults?: VaultEntry[];
+  activeVaultId?: string;
 }
 
 export interface FileNode {

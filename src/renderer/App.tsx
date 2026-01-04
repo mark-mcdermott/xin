@@ -38,6 +38,7 @@ import { PublishDialog } from './components/PublishDialog';
 import { PublishProgressPopup } from './components/PublishProgressPopup';
 import { SettingsPage } from './components/SettingsPage';
 import { CreateFileDialog } from './components/CreateFileDialog';
+import { VaultSelectionDialog } from './components/VaultSelectionDialog';
 import logoLeftFacing from './assets/pink-and-gray-mech-left.png';
 
 type SidebarTab = 'files' | 'tags' | 'daily';
@@ -81,6 +82,11 @@ const App: React.FC = () => {
   const [navHistory, setNavHistory] = useState<HistoryEntry[]>([]);
   const [navHistoryIndex, setNavHistoryIndex] = useState(-1);
   const isNavigatingRef = useRef(false); // Prevent adding to history during back/forward
+
+  // Vault selection state
+  const [showVaultSelection, setShowVaultSelection] = useState(false);
+  const [defaultVaultPath, setDefaultVaultPath] = useState<string>('');
+  const [vaultInitialized, setVaultInitialized] = useState(false);
 
   // Derived state for active tab
   const activeTab = activeTabIndex >= 0 ? openTabs[activeTabIndex] : null;
@@ -163,6 +169,55 @@ const App: React.FC = () => {
     await navigateToEntry(navHistory[newIndex]);
   }, [canGoForward, navHistoryIndex, navHistory, navigateToEntry]);
 
+  // Check for first run and show vault selection
+  useEffect(() => {
+    const checkFirstRun = async () => {
+      try {
+        const [firstRunResult, defaultPathResult] = await Promise.all([
+          window.electronAPI.vault.isFirstRun(),
+          window.electronAPI.vault.getDefaultPath()
+        ]);
+
+        if (firstRunResult.success && firstRunResult.isFirstRun) {
+          setDefaultVaultPath(defaultPathResult.path || '');
+          setShowVaultSelection(true);
+        } else {
+          // Not first run, initialize normally
+          setVaultInitialized(true);
+        }
+      } catch (err) {
+        console.error('Failed to check first run:', err);
+        setVaultInitialized(true);
+      }
+    };
+
+    checkFirstRun();
+  }, []);
+
+  // Handle vault selection
+  const handleVaultSelect = async (path: string) => {
+    try {
+      await window.electronAPI.vault.initialize(path);
+      setShowVaultSelection(false);
+      setVaultInitialized(true);
+      // Refresh file tree after initialization
+      refreshFileTree();
+    } catch (err) {
+      console.error('Failed to initialize vault:', err);
+    }
+  };
+
+  const handleVaultSkip = async () => {
+    try {
+      await window.electronAPI.vault.initialize();
+      setShowVaultSelection(false);
+      setVaultInitialized(true);
+      refreshFileTree();
+    } catch (err) {
+      console.error('Failed to initialize vault:', err);
+    }
+  };
+
   // Load today's note on mount
   useEffect(() => {
     const loadTodayNote = async () => {
@@ -175,10 +230,10 @@ const App: React.FC = () => {
       }
     };
 
-    if (vaultPath) {
+    if (vaultPath && vaultInitialized) {
       loadTodayNote();
     }
-  }, [vaultPath, getTodayNote]);
+  }, [vaultPath, vaultInitialized, getTodayNote]);
 
   // Load daily note dates on mount
   useEffect(() => {
@@ -956,6 +1011,17 @@ const App: React.FC = () => {
     const parts = vaultPath.split('/');
     return parts[parts.length - 1];
   };
+
+  // Show vault selection dialog on first run
+  if (showVaultSelection) {
+    return (
+      <VaultSelectionDialog
+        defaultPath={defaultVaultPath}
+        onSelect={handleVaultSelect}
+        onSkip={handleVaultSkip}
+      />
+    );
+  }
 
   return (
     <div className="h-screen w-screen flex flex-col bg-obsidian-bg">

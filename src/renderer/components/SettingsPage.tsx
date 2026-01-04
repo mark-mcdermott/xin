@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Plus, Trash2, Edit2, Github, Cloud } from 'lucide-react';
 import { Button } from './Button';
+import { ConfirmDialog } from './ConfirmDialog';
+
+interface VaultEntry {
+  id: string;
+  name: string;
+  path: string;
+  dailyNotesPath: string;
+  createdAt: string;
+}
 
 interface BlogTarget {
   id: string;
@@ -27,24 +36,42 @@ interface SettingsPageProps {
   vaultPath?: string | null;
 }
 
-export const SettingsPage: React.FC<SettingsPageProps> = ({ vaultPath }) => {
+export const SettingsPage: React.FC<SettingsPageProps> = () => {
   const [blogs, setBlogs] = useState<BlogTarget[]>([]);
   const [editingBlog, setEditingBlog] = useState<BlogTarget | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Multi-vault state
+  const [vaults, setVaults] = useState<VaultEntry[]>([]);
+  const [activeVaultId, setActiveVaultId] = useState<string | null>(null);
+  const [deleteVaultConfirm, setDeleteVaultConfirm] = useState<VaultEntry | null>(null);
+
   useEffect(() => {
     loadBlogs();
+    loadVaults();
   }, []);
 
   const loadBlogs = async () => {
     try {
-      setLoading(true);
       const result = await window.electronAPI.publish.getBlogs();
       if (result.success) {
         setBlogs(result.blogs || []);
       }
     } catch (error) {
       console.error('Failed to load blogs:', error);
+    }
+  };
+
+  const loadVaults = async () => {
+    try {
+      setLoading(true);
+      const result = await window.electronAPI.vault.getAll();
+      if (result.success) {
+        setVaults(result.vaults || []);
+        setActiveVaultId(result.activeVaultId || null);
+      }
+    } catch (error) {
+      console.error('Failed to load vaults:', error);
     } finally {
       setLoading(false);
     }
@@ -149,6 +176,69 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ vaultPath }) => {
 
   const handleCancel = () => {
     setEditingBlog(null);
+  };
+
+  const handleAddVault = async () => {
+    const result = await window.electronAPI.dialog.showOpenDialog({
+      title: 'Select Vault Folder',
+      properties: ['openDirectory', 'createDirectory']
+    });
+
+    if (!result.canceled && result.paths && result.paths.length > 0) {
+      try {
+        const addResult = await window.electronAPI.vault.add(result.paths[0]);
+        if (addResult.success) {
+          await loadVaults();
+          // Reload to switch to new vault
+          window.location.reload();
+        }
+      } catch (error: any) {
+        if (error.message?.includes('already exists')) {
+          alert('This vault is already added.');
+        } else {
+          console.error('Failed to add vault:', error);
+        }
+      }
+    }
+  };
+
+  const handleEditVault = async (vault: VaultEntry) => {
+    const result = await window.electronAPI.dialog.showOpenDialog({
+      title: 'Select New Vault Location',
+      defaultPath: vault.path,
+      properties: ['openDirectory', 'createDirectory']
+    });
+
+    if (!result.canceled && result.paths && result.paths.length > 0) {
+      const updateResult = await window.electronAPI.vault.update(vault.id, { path: result.paths[0] });
+      if (updateResult.success) {
+        await loadVaults();
+        // Reload if we edited the active vault
+        if (vault.id === activeVaultId) {
+          window.location.reload();
+        }
+      }
+    }
+  };
+
+  const handleDeleteVaultClick = (vault: VaultEntry) => {
+    setDeleteVaultConfirm(vault);
+  };
+
+  const handleDeleteVaultConfirm = async () => {
+    if (!deleteVaultConfirm) return;
+
+    try {
+      await window.electronAPI.vault.delete(deleteVaultConfirm.id);
+      setDeleteVaultConfirm(null);
+      await loadVaults();
+      // Reload if we deleted the active vault
+      if (deleteVaultConfirm.id === activeVaultId) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Failed to delete vault:', error);
+    }
   };
 
   if (loading) {
@@ -424,17 +514,101 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ vaultPath }) => {
   return (
     <div className="flex-1 overflow-y-auto" style={{ padding: '40px 48px' }}>
       <div className="max-w-2xl">
-        <h1 className="font-semibold mb-2" style={{ fontSize: '24px', color: 'var(--text-primary)' }}>Settings</h1>
-        {vaultPath && (
-          <p className="mb-8" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            Vault: {vaultPath}
-          </p>
-        )}
+        <h1 className="font-semibold" style={{ fontSize: '24px', color: 'var(--text-primary)', marginBottom: '32px' }}>Settings</h1>
 
-        {/* Blog Configurations Section */}
+        {/* Vaults Section */}
+        <div style={{ marginBottom: '32px' }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: '12px' }}>
+            <h2 className="font-semibold" style={{ fontSize: '16px', color: 'var(--text-primary)' }}>Vaults</h2>
+            <Button onClick={handleAddVault} variant="secondary">
+              <Plus size={16} strokeWidth={3} style={{ marginRight: '8px' }} />
+              Add Vault
+            </Button>
+          </div>
+          {vaults.length === 0 ? (
+            <div className="py-12 text-center rounded-lg" style={{ border: '1px dashed var(--border-primary)' }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                No vaults configured. Add one to get started!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {vaults.map(vault => (
+                <div
+                  key={vault.id}
+                  className="flex items-center justify-between transition-shadow hover:shadow-md"
+                  style={{
+                    padding: '16px 20px',
+                    border: '1px solid var(--input-border)',
+                    backgroundColor: 'var(--bg-primary)',
+                    boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.06)',
+                    borderRadius: '8px',
+                    marginBottom: '12px'
+                  }}
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium" style={{ fontSize: '14px', color: 'var(--text-primary)', margin: 0 }}>
+                        {vault.name}
+                      </h3>
+                      {vault.id === activeVaultId && (
+                        <span style={{
+                          fontSize: '11px',
+                          color: 'var(--bg-secondary)',
+                          backgroundColor: 'var(--text-muted)',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontWeight: 500,
+                          marginLeft: '8px'
+                        }}>
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                      {vault.path}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleEditVault(vault)}
+                      className="p-2 rounded-lg transition-colors hover:bg-gray-100"
+                      style={{ color: 'var(--text-icon)', backgroundColor: 'transparent' }}
+                      title="Edit"
+                    >
+                      <Edit2 size={16} strokeWidth={1.5} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteVaultClick(vault)}
+                      className="p-2 rounded-lg transition-colors hover:bg-red-50"
+                      style={{ color: 'var(--status-error)', backgroundColor: 'transparent' }}
+                      title="Delete"
+                    >
+                      <Trash2 size={16} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Delete Vault Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={deleteVaultConfirm !== null}
+          title="Delete Vault"
+          message="This will permanently delete this vault folder and all files (notes) inside it. Are you sure?"
+          confirmText="Delete"
+          cancelText="Cancel"
+          variant="danger"
+          onConfirm={handleDeleteVaultConfirm}
+          onCancel={() => setDeleteVaultConfirm(null)}
+        />
+
+        {/* Blogs Section */}
         <div>
           <div className="flex items-center justify-between" style={{ marginBottom: '20px' }}>
-            <h2 className="font-semibold" style={{ fontSize: '16px', color: 'var(--text-primary)' }}>Blog Configurations</h2>
+            <h2 className="font-semibold" style={{ fontSize: '16px', color: 'var(--text-primary)' }}>Blogs</h2>
             <Button onClick={handleAddBlog} variant="secondary">
               <Plus size={16} strokeWidth={3} style={{ marginRight: '8px' }} />
               Add Blog
@@ -453,10 +627,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ vaultPath }) => {
                 <div
                   key={blog.id}
                   className="flex items-center justify-between transition-shadow hover:shadow-md"
-                  style={{ padding: '2px 20px 16px 20px', border: '1px solid var(--input-border)', backgroundColor: 'var(--bg-primary)', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.06)', borderRadius: '8px', marginBottom: '12px' }}
+                  style={{ padding: '16px 20px', border: '1px solid var(--input-border)', backgroundColor: 'var(--bg-primary)', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.06)', borderRadius: '8px', marginBottom: '12px' }}
                 >
                   <div>
-                    <h3 className="font-medium" style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{blog.name}</h3>
+                    <h3 className="font-medium" style={{ fontSize: '14px', color: 'var(--text-primary)', margin: 0 }}>{blog.name}</h3>
                     <div className="flex items-center gap-1.5" style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
                       <Github size={13} strokeWidth={1.5} style={{ marginRight: '6px' }} />
                       <span>{blog.github.repo}</span>
