@@ -1,8 +1,9 @@
 import { promises as fs } from 'fs';
 import { join, parse, relative } from 'path';
 import { app } from 'electron';
-import type { VaultConfig, FileNode, VaultStructure } from './types';
+import type { VaultConfig, VaultEntry, FileNode, VaultStructure } from './types';
 import { DEFAULT_VAULT_STRUCTURE } from './types';
+import { randomUUID } from 'crypto';
 
 export class VaultManager {
   private vaultPath: string | null = null;
@@ -22,8 +23,8 @@ export class VaultManager {
       if (config?.vaultPath) {
         vaultPath = config.vaultPath;
       } else {
-        // Default to ~/Documents/XinVault
-        vaultPath = join(app.getPath('documents'), 'XinVault');
+        // Default to ~/Documents/XinVaults/Xin
+        vaultPath = join(app.getPath('documents'), 'XinVaults', 'Xin');
       }
     }
 
@@ -418,6 +419,221 @@ export class VaultManager {
    */
   getVaultPath(): string | null {
     return this.vaultPath;
+  }
+
+  /**
+   * Check if this is the first run (no config file exists)
+   */
+  async isFirstRun(): Promise<boolean> {
+    const config = await this.loadConfig();
+    return config === null;
+  }
+
+  /**
+   * Get all configured vaults
+   */
+  async getAllVaults(): Promise<VaultEntry[]> {
+    const config = await this.loadConfig();
+    if (!config) return [];
+
+    // Migration: if no vaults array but has vaultPath, create entry
+    if (!config.vaults && config.vaultPath) {
+      const vault: VaultEntry = {
+        id: randomUUID(),
+        name: parse(config.vaultPath).base,
+        path: config.vaultPath,
+        dailyNotesPath: config.dailyNotesPath,
+        createdAt: config.lastOpened || new Date().toISOString()
+      };
+      config.vaults = [vault];
+      config.activeVaultId = vault.id;
+      await this.saveConfig(config);
+      return config.vaults;
+    }
+
+    return config.vaults || [];
+  }
+
+  /**
+   * Get the active vault ID
+   */
+  async getActiveVaultId(): Promise<string | null> {
+    const config = await this.loadConfig();
+    return config?.activeVaultId || null;
+  }
+
+  /**
+   * Add a new vault
+   */
+  async addVault(vaultPath: string): Promise<VaultEntry> {
+    const config = await this.loadConfig() || {
+      vaultPath: '',
+      lastOpened: new Date().toISOString(),
+      dailyNotesPath: '',
+      vaults: [],
+      activeVaultId: undefined
+    };
+
+    // Ensure vaults array exists
+    if (!config.vaults) {
+      config.vaults = [];
+    }
+
+    // Check if vault already exists
+    const existing = config.vaults.find(v => v.path === vaultPath);
+    if (existing) {
+      throw new Error('Vault already exists');
+    }
+
+    // Create new vault entry
+    const vault: VaultEntry = {
+      id: randomUUID(),
+      name: parse(vaultPath).base,
+      path: vaultPath,
+      dailyNotesPath: join(vaultPath, DEFAULT_VAULT_STRUCTURE.dailyNotes),
+      createdAt: new Date().toISOString()
+    };
+
+    config.vaults.push(vault);
+
+    // Set as active and update legacy fields
+    config.activeVaultId = vault.id;
+    config.vaultPath = vaultPath;
+    config.dailyNotesPath = vault.dailyNotesPath;
+    config.lastOpened = new Date().toISOString();
+
+    await this.saveConfig(config);
+
+    // Initialize the vault structure
+    this.vaultPath = vaultPath;
+    await this.ensureVaultStructure();
+
+    return vault;
+  }
+
+  /**
+   * Switch to a different vault
+   */
+  async switchVault(vaultId: string): Promise<string> {
+    const config = await this.loadConfig();
+    if (!config || !config.vaults) {
+      throw new Error('No vaults configured');
+    }
+
+    const vault = config.vaults.find(v => v.id === vaultId);
+    if (!vault) {
+      throw new Error('Vault not found');
+    }
+
+    config.activeVaultId = vaultId;
+    config.vaultPath = vault.path;
+    config.dailyNotesPath = vault.dailyNotesPath;
+    config.lastOpened = new Date().toISOString();
+
+    await this.saveConfig(config);
+
+    this.vaultPath = vault.path;
+    return vault.path;
+  }
+
+  /**
+   * Update a vault entry
+   */
+  async updateVault(vaultId: string, updates: Partial<Pick<VaultEntry, 'name' | 'path'>>): Promise<VaultEntry> {
+    const config = await this.loadConfig();
+    if (!config || !config.vaults) {
+      throw new Error('No vaults configured');
+    }
+
+    const vaultIndex = config.vaults.findIndex(v => v.id === vaultId);
+    if (vaultIndex === -1) {
+      throw new Error('Vault not found');
+    }
+
+    const vault = config.vaults[vaultIndex];
+
+    if (updates.path && updates.path !== vault.path) {
+      vault.path = updates.path;
+      vault.dailyNotesPath = join(updates.path, DEFAULT_VAULT_STRUCTURE.dailyNotes);
+      vault.name = parse(updates.path).base;
+
+      // Update legacy fields if this is active vault
+      if (config.activeVaultId === vaultId) {
+        config.vaultPath = vault.path;
+        config.dailyNotesPath = vault.dailyNotesPath;
+      }
+    }
+
+    if (updates.name) {
+      vault.name = updates.name;
+    }
+
+    config.vaults[vaultIndex] = vault;
+    await this.saveConfig(config);
+
+    return vault;
+  }
+
+  /**
+   * Remove a vault from config (doesn't delete files)
+   */
+  async removeVault(vaultId: string): Promise<void> {
+    const config = await this.loadConfig();
+    if (!config || !config.vaults) {
+      throw new Error('No vaults configured');
+    }
+
+    const vaultIndex = config.vaults.findIndex(v => v.id === vaultId);
+    if (vaultIndex === -1) {
+      throw new Error('Vault not found');
+    }
+
+    config.vaults.splice(vaultIndex, 1);
+
+    // If we removed the active vault, switch to another or clear
+    if (config.activeVaultId === vaultId) {
+      if (config.vaults.length > 0) {
+        const newActive = config.vaults[0];
+        config.activeVaultId = newActive.id;
+        config.vaultPath = newActive.path;
+        config.dailyNotesPath = newActive.dailyNotesPath;
+        this.vaultPath = newActive.path;
+      } else {
+        config.activeVaultId = undefined;
+        config.vaultPath = '';
+        config.dailyNotesPath = '';
+        this.vaultPath = null;
+      }
+    }
+
+    await this.saveConfig(config);
+  }
+
+  /**
+   * Delete a vault and all its files
+   */
+  async deleteVault(vaultId: string): Promise<void> {
+    const config = await this.loadConfig();
+    if (!config || !config.vaults) {
+      throw new Error('No vaults configured');
+    }
+
+    const vault = config.vaults.find(v => v.id === vaultId);
+    if (!vault) {
+      throw new Error('Vault not found');
+    }
+
+    // Delete the vault folder and all contents
+    try {
+      await fs.rm(vault.path, { recursive: true, force: true });
+    } catch (err: any) {
+      if (err.code !== 'ENOENT') {
+        throw err;
+      }
+    }
+
+    // Remove from config
+    await this.removeVault(vaultId);
   }
 }
 
