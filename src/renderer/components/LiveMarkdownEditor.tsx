@@ -450,6 +450,83 @@ class BlogBlockHeaderWidget extends WidgetType {
   }
 }
 
+// Widget for @ blog post header (e.g., "@markmcdermott.io post")
+class AtPostHeaderWidget extends WidgetType {
+  constructor(
+    readonly blockStartLine: number,
+    readonly blogName: string,
+    readonly hasPublish: boolean,
+    readonly isPublished: boolean
+  ) {
+    super();
+  }
+
+  toDOM() {
+    const wrapper = document.createElement('span');
+    wrapper.className = 'cm-at-post-header';
+    wrapper.style.cssText = 'display: inline-flex; align-items: center; gap: 12px; line-height: 1;';
+
+    const label = document.createElement('span');
+    label.textContent = 'blog post';
+    label.style.cssText = 'font-size: 1.75em; font-weight: 700; color: #3f0c8d; line-height: 1;';
+    wrapper.appendChild(label);
+
+    if (this.hasPublish) {
+      const iconBtn = document.createElement('button');
+      iconBtn.className = 'cm-at-publish-btn';
+      const blockLine = this.blockStartLine;
+      const blogName = this.blogName;
+
+      if (this.isPublished) {
+        iconBtn.innerHTML = CHECK_CIRCLE_ICON_SVG;
+        iconBtn.title = 'Click to republish';
+        iconBtn.style.cssText = 'background: none; border: none; cursor: default; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: flex; align-items: center; color: #16a34a;';
+        iconBtn.onmouseenter = () => { iconBtn.style.backgroundColor = '#f0f0f0'; };
+        iconBtn.onmouseleave = () => { iconBtn.style.backgroundColor = 'transparent'; };
+
+        iconBtn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          iconBtn.innerHTML = ROCKET_ICON_SVG;
+          iconBtn.title = 'Republish this blog post';
+          iconBtn.style.color = '#3f0c8d';
+          iconBtn.onclick = (e2) => {
+            e2.preventDefault();
+            e2.stopPropagation();
+            window.dispatchEvent(new CustomEvent('at-post-publish-click', {
+              detail: { blockLine, blogName }
+            }));
+          };
+        };
+      } else {
+        iconBtn.innerHTML = ROCKET_ICON_SVG;
+        iconBtn.title = 'Publish this blog post';
+        iconBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: flex; align-items: center; color: #3f0c8d;';
+        iconBtn.onmouseenter = () => { iconBtn.style.backgroundColor = '#f0f0f0'; };
+        iconBtn.onmouseleave = () => { iconBtn.style.backgroundColor = 'transparent'; };
+
+        iconBtn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.dispatchEvent(new CustomEvent('at-post-publish-click', {
+            detail: { blockLine, blogName }
+          }));
+        };
+      }
+      wrapper.appendChild(iconBtn);
+    }
+
+    return wrapper;
+  }
+
+  eq(other: AtPostHeaderWidget) {
+    return other.blockStartLine === this.blockStartLine &&
+           other.blogName === this.blogName &&
+           other.hasPublish === this.hasPublish &&
+           other.isPublished === this.isPublished;
+  }
+}
+
 // Simple widget for code block labels and closing blog markers
 class SimpleTextWidget extends WidgetType {
   constructor(readonly html: string) {
@@ -522,6 +599,11 @@ function createDecorations(
   let blogFrontmatterDashCount = 0;
   let blogBlockStartLine = -1;
 
+  // @ post state tracking
+  let inAtPost = false;
+  let atPostBlogName = '';
+  let atPostStartLine = -1;
+
   for (let i = 1; i <= doc.lines; i++) {
     const line = doc.line(i);
     const lineText = line.text;
@@ -580,6 +662,72 @@ function createDecorations(
         inBlogFrontmatter = false;
       }
       continue;
+    }
+
+    // Track @ post state
+    const atPostMatch = lineText.match(/^@(\S+)\s+post\s*$/);
+    if (atPostMatch && !inAtPost && !inBlogBlock && !inCodeBlock) {
+      // Check if this is a valid blog name
+      const blogName = atPostMatch[1];
+      if (blogs && blogs.some(b => b.name === blogName)) {
+        inAtPost = true;
+        atPostBlogName = blogName;
+        atPostStartLine = i;
+
+        // Look ahead to check if @published true exists
+        let isPublished = false;
+        for (let j = i + 1; j <= doc.lines; j++) {
+          const checkLine = doc.line(j).text;
+          // End conditions
+          if (checkLine.trim() === '---' || checkLine.match(/^#[a-zA-Z]/)) break;
+          if (checkLine.match(/^@published\s+true/i)) {
+            isPublished = true;
+            break;
+          }
+        }
+
+        // Show widget unless cursor is on this line
+        if (!cursorOnThisLine) {
+          decorations.push(
+            Decoration.replace({
+              widget: new AtPostHeaderWidget(i, blogName, Boolean(onPublish), isPublished)
+            }).range(line.from, line.to)
+          );
+        } else {
+          // Cursor on line - show the @ and blog name in gray italic
+          decorations.push(
+            Decoration.mark({ class: 'cm-at-field' }).range(line.from, line.to)
+          );
+        }
+        continue;
+      }
+    }
+
+    // Check for @ post end conditions
+    if (inAtPost) {
+      // End on ---, hashtag, or we continue
+      if (lineText.trim() === '---' || lineText.match(/^#[a-zA-Z]/)) {
+        inAtPost = false;
+        atPostBlogName = '';
+        atPostStartLine = -1;
+        // Don't continue - let normal processing handle this line
+      }
+    }
+
+    // Inside @ post - handle @ field lines
+    if (inAtPost && lineText.match(/^@[a-zA-Z]/)) {
+      const fieldMatch = lineText.match(/^@(\w+)(\s+(.*))?$/);
+      if (fieldMatch) {
+        const fieldName = fieldMatch[1];
+        const fieldEnd = line.from + 1 + fieldName.length;
+        // Style the @fieldName portion
+        if (!cursorOnThisLine) {
+          decorations.push(
+            Decoration.mark({ class: 'cm-at-field' }).range(line.from, fieldEnd)
+          );
+        }
+        continue;
+      }
     }
 
     // Track code block state
@@ -993,7 +1141,9 @@ const editorTheme = EditorView.theme({
   '.cm-horizontal-rule': {
     display: 'block',
     textAlign: 'center',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    color: 'transparent',
+    fontSize: '0'
   },
   '.cm-horizontal-rule::before': {
     content: '""',
@@ -1001,7 +1151,19 @@ const editorTheme = EditorView.theme({
     width: '100%',
     height: '1px',
     backgroundColor: '#d1d5db',
-    verticalAlign: 'middle'
+    verticalAlign: 'middle',
+    fontSize: '14px'
+  },
+
+  // @ post styles
+  '.cm-at-field': {
+    color: '#9ca3af',
+    fontStyle: 'italic'
+  },
+  '.cm-at-post-header': {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '12px'
   },
 
   // Code block lines
@@ -1119,6 +1281,121 @@ tags: [""]
 `;
   }, []);
 
+  // Available frontmatter fields for @ posts
+  const atPostFields = ['title', 'subtitle', 'publishDate', 'tags', 'slug', 'published'];
+
+  // Helper to check if position is inside an @ post block
+  const isInsideAtPost = useCallback((doc: Text, pos: number): { inside: boolean; blogName: string; startLine: number } => {
+    const currentLine = doc.lineAt(pos);
+    let inAtPost = false;
+    let atPostBlogName = '';
+    let atPostStartLine = -1;
+
+    for (let i = 1; i <= currentLine.number; i++) {
+      const lineText = doc.line(i).text;
+
+      // Check for @blogname post pattern
+      const atPostMatch = lineText.match(/^@(\S+)\s+post\s*$/);
+      if (atPostMatch && !inAtPost) {
+        // Verify this is a valid blog name
+        const blogName = atPostMatch[1];
+        if (blogsRef.current.some(b => b.name === blogName)) {
+          inAtPost = true;
+          atPostBlogName = blogName;
+          atPostStartLine = i;
+        }
+      }
+
+      // Check for end of @ post (---, #tag, or we'll check EOF separately)
+      if (inAtPost && i > atPostStartLine) {
+        if (lineText.trim() === '---' || lineText.match(/^#[a-zA-Z]/)) {
+          inAtPost = false;
+          atPostBlogName = '';
+          atPostStartLine = -1;
+        }
+      }
+    }
+
+    return { inside: inAtPost, blogName: atPostBlogName, startLine: atPostStartLine };
+  }, []);
+
+  // @ autocomplete source for blog selection (triggers on @)
+  const atBlogCompletionSource = useCallback((context: CompletionContext) => {
+    const line = context.state.doc.lineAt(context.pos);
+    const lineText = line.text;
+    const cursorInLine = context.pos - line.from;
+
+    // Check if we have @ at start of line or after whitespace
+    const beforeCursor = lineText.slice(0, cursorInLine);
+    const atMatch = beforeCursor.match(/(^|[\s])@([^\s]*)$/);
+    if (!atMatch) return null;
+
+    const atIndex = beforeCursor.lastIndexOf('@');
+    const typed = atMatch[2]; // What's typed after @
+
+    // Don't trigger if there's a space after @ (breaks the decoration)
+    if (typed.includes(' ')) return null;
+
+    // Check if we're already inside an @ post
+    const atPostState = isInsideAtPost(context.state.doc, context.pos);
+
+    if (atPostState.inside) {
+      // Inside @ post - show frontmatter fields
+      const options: Completion[] = atPostFields
+        .filter(field => field.startsWith(typed.toLowerCase()))
+        .map(field => ({
+          label: field,
+          type: 'keyword',
+          apply: (view, completion, from, to) => {
+            const insertText = field + ' ';
+            view.dispatch({
+              changes: { from: line.from + atIndex, to: context.pos, insert: '@' + insertText },
+              selection: { anchor: line.from + atIndex + 1 + insertText.length }
+            });
+          },
+          detail: 'frontmatter'
+        }));
+
+      if (options.length === 0) return null;
+
+      return {
+        from: line.from + atIndex + 1,
+        to: context.pos,
+        options,
+        validFor: /^[a-zA-Z]*$/
+      };
+    } else {
+      // Not inside @ post - show blog names
+      const options: Completion[] = blogsRef.current
+        .filter(blog => blog.name.toLowerCase().startsWith(typed.toLowerCase()))
+        .map(blog => ({
+          label: blog.name,
+          type: 'text',
+          apply: (view, completion, from, to) => {
+            const today = new Date().toISOString().split('T')[0];
+            const insertText = `${blog.name} post\n@title `;
+            // Check if there's a --- above, if not add one
+            const lineAbove = line.number > 1 ? context.state.doc.line(line.number - 1).text.trim() : '';
+            const prefix = lineAbove === '---' ? '' : '---\n';
+            view.dispatch({
+              changes: { from: line.from + atIndex, to: context.pos, insert: prefix + '@' + insertText },
+              selection: { anchor: line.from + atIndex + prefix.length + 1 + insertText.length }
+            });
+          },
+          detail: 'blog'
+        }));
+
+      if (options.length === 0) return null;
+
+      return {
+        from: line.from + atIndex + 1,
+        to: context.pos,
+        options,
+        validFor: /^[a-zA-Z0-9.-]*$/
+      };
+    }
+  }, [isInsideAtPost]);
+
   // Blog autocomplete source
   const blogCompletionSource = useCallback((context: CompletionContext) => {
     const line = context.state.doc.lineAt(context.pos);
@@ -1219,6 +1496,67 @@ tags: [""]
         run: (view) => {
           const pos = view.state.selection.main.head;
           const doc = view.state.doc;
+
+          // Check if in @ post block first
+          const atPostInfo = isInsideAtPost(doc, pos);
+          if (atPostInfo.inside) {
+            const currentLine = doc.lineAt(pos);
+            const currentLineText = currentLine.text;
+
+            // Find all @ field lines in this @ post
+            const fieldOrder = ['title', 'subtitle', 'publishDate', 'tags', 'slug', 'published'];
+            const fieldLines: Record<string, number> = {};
+            let atPostEndLine = doc.lines;
+
+            for (let i = atPostInfo.startLine + 1; i <= doc.lines; i++) {
+              const lineText = doc.line(i).text;
+              // End conditions
+              if (lineText.trim() === '---' || lineText.match(/^#[a-zA-Z]/) || lineText.match(/^@[a-zA-Z]+\s+post$/)) {
+                atPostEndLine = i;
+                break;
+              }
+              const fieldMatch = lineText.match(/^@(\w+)/);
+              if (fieldMatch) {
+                fieldLines[fieldMatch[1]] = i;
+              }
+            }
+
+            // Determine current field and find next
+            const currentFieldMatch = currentLineText.match(/^@(\w+)/);
+            if (currentFieldMatch) {
+              const currentField = currentFieldMatch[1];
+              const currentIndex = fieldOrder.indexOf(currentField);
+
+              // Find next field that exists
+              for (let i = currentIndex + 1; i < fieldOrder.length; i++) {
+                const nextField = fieldOrder[i];
+                if (fieldLines[nextField]) {
+                  const targetLine = doc.line(fieldLines[nextField]);
+                  const targetText = targetLine.text;
+                  // Position cursor after @fieldname (at the value)
+                  const cursorPos = targetLine.from + nextField.length + 2; // @, fieldname, space
+                  view.dispatch({
+                    selection: { anchor: Math.min(cursorPos, targetLine.to) }
+                  });
+                  return true;
+                }
+              }
+
+              // No more fields - jump to content (first non-@ line after fields)
+              for (let i = atPostInfo.startLine + 1; i < atPostEndLine; i++) {
+                const lineText = doc.line(i).text;
+                if (!lineText.match(/^@\w+/)) {
+                  const contentLine = doc.line(i);
+                  view.dispatch({
+                    selection: { anchor: contentLine.from }
+                  });
+                  return true;
+                }
+              }
+            }
+
+            return false;
+          }
 
           if (!isInsideBlogBlock(doc, pos)) {
             return false;
@@ -1348,7 +1686,7 @@ tags: [""]
         saveKeymap,
         markdown(),
         autocompletion({
-          override: [blogCompletionSource],
+          override: [blogCompletionSource, atBlogCompletionSource],
           activateOnTyping: true,
           defaultKeymap: true
         }),
@@ -1375,7 +1713,7 @@ tags: [""]
       view.destroy();
     };
     // Note: onPublishBlogBlock and blogs are accessed via refs to avoid recreating editor
-  }, [getBlogBlockTemplate, blogCompletionSource]);
+  }, [getBlogBlockTemplate, blogCompletionSource, atBlogCompletionSource]);
 
   // Update content when file changes externally (not from our own save)
   useEffect(() => {
@@ -1535,9 +1873,160 @@ tags: [""]
       }
     };
 
+    // Handler for @ post publish click
+    const handleAtPostPublishClick = async (e: Event) => {
+      const customEvent = e as CustomEvent<{ blockLine: number; blogName: string }>;
+      const { blockLine, blogName } = customEvent.detail;
+
+      if (!viewRef.current || !onPublishBlogBlockRef.current) {
+        return;
+      }
+
+      const doc = viewRef.current.state.doc;
+      const blog = blogsRef.current.find(b => b.name === blogName);
+      if (!blog) {
+        alert(`Blog "${blogName}" not found in settings.`);
+        return;
+      }
+
+      // Find the @ post boundaries and extract content
+      let atPostEndLine = doc.lines;
+      const frontmatter: Record<string, string> = {};
+      const contentLines: string[] = [];
+      let foundTitle = false;
+
+      for (let j = blockLine + 1; j <= doc.lines; j++) {
+        const lineText = doc.line(j).text;
+
+        // End conditions: ---, hashtag, or another @ post
+        if (lineText.trim() === '---' || lineText.match(/^#[a-zA-Z]/) || lineText.match(/^@[a-zA-Z]+\s+post$/)) {
+          atPostEndLine = j - 1;
+          break;
+        }
+
+        // Parse @ field lines
+        const fieldMatch = lineText.match(/^@(\w+)\s+(.*)/);
+        if (fieldMatch) {
+          const [, fieldName, fieldValue] = fieldMatch;
+          if (fieldName === 'title') {
+            frontmatter.title = fieldValue.trim();
+            foundTitle = true;
+          } else if (fieldName === 'subtitle') {
+            frontmatter.subtitle = fieldValue.trim();
+          } else if (fieldName === 'publishDate') {
+            frontmatter.publishDate = fieldValue.trim();
+          } else if (fieldName === 'tags') {
+            frontmatter.tags = fieldValue.trim();
+          } else if (fieldName === 'slug') {
+            frontmatter.slug = fieldValue.trim();
+          } else if (fieldName === 'published') {
+            frontmatter.published = fieldValue.trim();
+          }
+        } else if (foundTitle) {
+          // Content line after the title
+          contentLines.push(lineText);
+        }
+      }
+
+      if (!frontmatter.title) {
+        alert('No title found in @ post. Please add @title.');
+        return;
+      }
+
+      // Build the content in standard frontmatter format
+      let blockContent = '---\n';
+      blockContent += `title: "${frontmatter.title}"\n`;
+      if (frontmatter.subtitle) {
+        blockContent += `subtitle: "${frontmatter.subtitle}"\n`;
+      }
+      if (frontmatter.publishDate) {
+        blockContent += `publishDate: "${frontmatter.publishDate}"\n`;
+      }
+      if (frontmatter.tags) {
+        // Convert comma-separated tags to array format
+        const tagArray = frontmatter.tags.split(',').map(t => t.trim()).filter(t => t);
+        blockContent += `tags: [${tagArray.map(t => `"${t}"`).join(', ')}]\n`;
+      }
+      if (frontmatter.slug) {
+        blockContent += `slug: "${frontmatter.slug}"\n`;
+      }
+      blockContent += '---\n';
+      blockContent += contentLines.join('\n');
+
+      const result = await onPublishBlogBlockRef.current!(blog.id, blockContent.trim());
+
+      if (result.success && viewRef.current) {
+        const freshDoc = viewRef.current.state.doc;
+        const changes: Array<{ from: number; to: number; insert: string }> = [];
+
+        // Find @slug and @published lines to update
+        let slugLineNum = -1;
+        let publishedLineNum = -1;
+        let lastFieldLine = blockLine;
+
+        for (let j = blockLine + 1; j <= freshDoc.lines; j++) {
+          const lineText = freshDoc.line(j).text;
+          if (lineText.trim() === '---' || lineText.match(/^#[a-zA-Z]/) || lineText.match(/^@[a-zA-Z]+\s+post$/)) {
+            break;
+          }
+          if (lineText.match(/^@\w+/)) {
+            lastFieldLine = j;
+            if (lineText.match(/^@slug\s/)) {
+              slugLineNum = j;
+            }
+            if (lineText.match(/^@published\s/)) {
+              publishedLineNum = j;
+            }
+          }
+        }
+
+        // Update or add @slug
+        if (result.slug && result.slug !== frontmatter.slug) {
+          if (slugLineNum !== -1) {
+            const slugLine = freshDoc.line(slugLineNum);
+            changes.push({
+              from: slugLine.from,
+              to: slugLine.to,
+              insert: `@slug ${result.slug}`
+            });
+          } else {
+            // Add after last field line
+            const insertLine = freshDoc.line(lastFieldLine);
+            changes.push({
+              from: insertLine.to,
+              to: insertLine.to,
+              insert: `\n@slug ${result.slug}`
+            });
+            lastFieldLine++; // Account for added line
+          }
+        }
+
+        // Add @published true if not already present
+        if (publishedLineNum === -1) {
+          const insertLine = freshDoc.line(lastFieldLine);
+          changes.push({
+            from: insertLine.to,
+            to: insertLine.to,
+            insert: '\n@published true'
+          });
+        }
+
+        if (changes.length > 0) {
+          changes.sort((a, b) => b.from - a.from);
+          viewRef.current.dispatch({ changes });
+        }
+
+        contentRef.current = viewRef.current.state.doc.toString();
+        const newContent = viewRef.current.state.doc.toString();
+        onSave(newContent);
+      }
+    };
+
     window.addEventListener('blog-publish-click', handlePublishClick);
+    window.addEventListener('at-post-publish-click', handleAtPostPublishClick);
     return () => {
       window.removeEventListener('blog-publish-click', handlePublishClick);
+      window.removeEventListener('at-post-publish-click', handleAtPostPublishClick);
     };
     // onPublishBlogBlock accessed via ref to avoid re-registering listeners
   }, [scheduleSave]);
