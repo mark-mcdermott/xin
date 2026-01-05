@@ -20,6 +20,8 @@ interface FileTreeNodeProps {
   onStartRename?: (path: string) => void;
   onRenameSubmit?: (oldPath: string, newName: string) => void;
   onRenameCancel?: () => void;
+  expandedPaths?: Set<string>; // Controlled expansion state
+  onFolderToggle?: (path: string, expanded: boolean) => void;
 }
 
 const FileTreeNode: React.FC<FileTreeNodeProps> = ({
@@ -39,14 +41,22 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
   renamingPath,
   onStartRename,
   onRenameSubmit,
-  onRenameCancel
+  onRenameCancel,
+  expandedPaths,
+  onFolderToggle
 }) => {
-  const [isExpanded, setIsExpanded] = useState(level < 2);
+  // Use controlled expansion if expandedPaths is provided, otherwise use local state
+  const [localExpanded, setLocalExpanded] = useState(level < 2);
+  const isExpanded = expandedPaths ? expandedPaths.has(node.path) : localExpanded;
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleClick = () => {
     if (node.type === 'folder') {
-      setIsExpanded(!isExpanded);
+      if (onFolderToggle) {
+        onFolderToggle(node.path, !isExpanded);
+      } else {
+        setLocalExpanded(!localExpanded);
+      }
     } else {
       onFileClick?.(node.path);
     }
@@ -258,6 +268,8 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
                   onStartRename={onStartRename}
                   onRenameSubmit={onRenameSubmit}
                   onRenameCancel={onRenameCancel}
+                  expandedPaths={expandedPaths}
+                  onFolderToggle={onFolderToggle}
                 />
               );
             });
@@ -471,6 +483,8 @@ interface FileTreeComponentProps {
   onInlineCreateInFolderCancel?: () => void;
   onCreateInFolder?: (folderPath: string, type: 'file' | 'folder') => void;
   onSidebarContextMenu?: () => void;
+  expandedPaths?: Set<string>;
+  onFolderToggle?: (path: string, expanded: boolean) => void;
 }
 
 export const FileTree: React.FC<FileTreeComponentProps> = ({
@@ -486,7 +500,9 @@ export const FileTree: React.FC<FileTreeComponentProps> = ({
   onInlineCreateInFolder,
   onInlineCreateInFolderCancel,
   onCreateInFolder,
-  onSidebarContextMenu
+  onSidebarContextMenu,
+  expandedPaths,
+  onFolderToggle
 }) => {
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
@@ -570,6 +586,8 @@ export const FileTree: React.FC<FileTreeComponentProps> = ({
               onStartRename={handleStartRename}
               onRenameSubmit={handleRenameSubmit}
               onRenameCancel={handleRenameCancel}
+              expandedPaths={expandedPaths}
+              onFolderToggle={onFolderToggle}
             />
           );
         });

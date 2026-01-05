@@ -9,8 +9,8 @@ interface TagBrowserProps {
 export const TagBrowser: React.FC<TagBrowserProps> = ({ tags, selectedTag, onTagClick }) => {
   if (tags.length === 0) {
     return (
-      <div className="p-4 text-obsidian-text-muted text-sm">
-        No tags found. Start writing with tags like <span className="text-accent">#project-a</span> in your notes!
+      <div style={{ fontSize: '14px', color: 'var(--text-muted)', margin: '16px', lineHeight: '1.5', maxWidth: '180px' }}>
+        No tags found. Start writing with tags like <span style={{ color: 'var(--accent-primary)' }}>#project-a</span> in your notes!
       </div>
     );
   }

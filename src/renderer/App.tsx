@@ -74,6 +74,9 @@ const App: React.FC = () => {
   const [activeVaultId, setActiveVaultId] = useState<string | null>(null);
   const vaultMenuRef = useRef<HTMLDivElement>(null);
 
+  // File tree expansion state (for controlled breadcrumb navigation)
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+
   // Blog block publish progress state
   const [blogBlockPublishJobId, setBlogBlockPublishJobId] = useState<string | null>(null);
   const [blogBlockPublishStatus, setBlogBlockPublishStatus] = useState<'pending' | 'preparing' | 'pushing' | 'building' | 'deploying' | 'completed' | 'failed'>('pending');
@@ -260,6 +263,49 @@ const App: React.FC = () => {
       console.error('Failed to initialize vault:', err);
     }
   };
+
+  // Handle folder toggle in file tree
+  const handleFolderToggle = useCallback((path: string, expanded: boolean) => {
+    setExpandedPaths(prev => {
+      const next = new Set(prev);
+      if (expanded) {
+        next.add(path);
+      } else {
+        next.delete(path);
+      }
+      return next;
+    });
+  }, []);
+
+  // Handle breadcrumb navigation - expand only the path to the clicked folder
+  const handleBreadcrumbNavigate = useCallback((folderPath: string) => {
+    // Switch to files view if in tags view
+    if (sidebarTab !== 'files') {
+      setSidebarTab('files');
+    }
+
+    // Build the set of paths to expand (all ancestors of the target folder, plus the folder itself)
+    // Note: FileTree uses RELATIVE paths (e.g., 'daily-notes', not '/Users/.../daily-notes')
+    // The breadcrumb also uses relative paths, so we work with them directly
+    const newExpandedPaths = new Set<string>();
+
+    if (folderPath) {
+      // Normalize by removing trailing slashes
+      const normalizedPath = folderPath.replace(/\/+$/, '');
+
+      // Build all ancestor paths that should be expanded (including the target folder)
+      // e.g., for 'notes/ideas', expand both 'notes' and 'notes/ideas'
+      const segments = normalizedPath.split('/').filter(Boolean);
+      let currentPath = '';
+
+      for (const segment of segments) {
+        currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+        newExpandedPaths.add(currentPath);
+      }
+    }
+
+    setExpandedPaths(newExpandedPaths);
+  }, [sidebarTab]);
 
   // Load today's note on mount
   useEffect(() => {
@@ -1344,6 +1390,8 @@ const App: React.FC = () => {
                     }
                   }
                 }}
+                expandedPaths={expandedPaths.size > 0 ? expandedPaths : undefined}
+                onFolderToggle={handleFolderToggle}
               />
             ) : (
               <TagBrowser
@@ -1483,7 +1531,7 @@ const App: React.FC = () => {
 
               {/* Center - breadcrumbs */}
               <div className="absolute left-1/2 transform -translate-x-1/2">
-                <Breadcrumb path={selectedFile!} />
+                <Breadcrumb path={selectedFile!} onNavigate={handleBreadcrumbNavigate} />
               </div>
 
               {/* Right side - view mode icon (hidden - editor mode is now the only option)
