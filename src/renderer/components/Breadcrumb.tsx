@@ -8,10 +8,12 @@ interface BreadcrumbProps {
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({ path, onNavigate }) => {
   // Split path into segments
   const segments = path.split('/').filter(Boolean);
+  const hasLeadingSlash = path.startsWith('/');
 
   // Build cumulative paths for each segment
   const pathSegments = segments.map((segment, index) => {
-    const fullPath = segments.slice(0, index + 1).join('/');
+    // Preserve leading slash if original path had one
+    const fullPath = (hasLeadingSlash ? '/' : '') + segments.slice(0, index + 1).join('/');
     return {
       name: segment.replace('.md', ''),
       path: fullPath,
@@ -24,8 +26,8 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ path, onNavigate }) => {
       {/* Home/Vault icon */}
       <button
         onClick={() => onNavigate?.('')}
-        className="flex items-center transition-colors flex-shrink-0"
-        style={{ color: 'var(--breadcrumb-text)' }}
+        className="flex items-center transition-all flex-shrink-0 hover:opacity-60"
+        style={{ color: 'var(--breadcrumb-text)', cursor: onNavigate ? 'pointer' : 'default' }}
         title="Vault root"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,8 +46,8 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ path, onNavigate }) => {
           ) : (
             <button
               onClick={() => onNavigate?.(segment.path)}
-              className="transition-colors truncate"
-              style={{ color: 'var(--breadcrumb-text)' }}
+              className="transition-all truncate hover:opacity-60"
+              style={{ color: 'var(--breadcrumb-text)', cursor: onNavigate ? 'pointer' : 'default' }}
             >
               {segment.name}
             </button>

@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
-import { Trash2, Rocket, ArrowLeft, ArrowRight, Pencil, Eye } from 'lucide-react';
+import { Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface TaggedContent {
   date: string;
@@ -23,13 +23,11 @@ interface TagViewProps {
   goForward?: () => void;
 }
 
-export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, onPublish, onUpdateContent, canGoBack, canGoForward, goBack, goForward }) => {
+export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, canGoBack, canGoForward, goBack, goForward }) => {
   const [content, setContent] = useState<TaggedContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editedContent, setEditedContent] = useState<Record<number, string>>({});
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -93,8 +91,9 @@ export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, 
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      {/* Navigation bar */}
-      <div className="flex-shrink-0 flex items-center px-3" style={{ paddingTop: '10px', paddingBottom: '10px' }}>
+      {/* Navigation bar - matches note page exactly */}
+      <div className="flex items-center relative" style={{ paddingTop: '16px', paddingBottom: '10px', paddingLeft: '16px', paddingRight: '24px' }}>
+        {/* Left side - arrow buttons */}
         <div className="flex items-center gap-2">
           <button
             className={`p-1 rounded transition-colors ${canGoBack ? 'hover:bg-[var(--hover-bg)]' : 'opacity-40 cursor-default'}`}
@@ -115,55 +114,27 @@ export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, 
             <ArrowRight size={18} strokeWidth={1.5} />
           </button>
         </div>
-      </div>
 
-      {/* Header */}
-      <div className="flex-shrink-0 pr-6 pb-4" style={{ paddingLeft: '36px' }}>
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-obsidian-text flex items-center gap-2">
-              <span className="text-accent">#</span>
-              {tag.substring(1)}
-            </h1>
-            <p className="text-sm text-obsidian-text-muted mt-1">
-              {content.length} {content.length === 1 ? 'entry' : 'entries'}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setIsEditMode(!isEditMode)}
-              className="p-2 transition-colors"
-              style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', borderRadius: '6px' }}
-              title={isEditMode ? "Preview mode" : "Edit mode"}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              {isEditMode ? <Pencil size={18} strokeWidth={1.5} /> : <Eye size={18} strokeWidth={1.5} />}
-            </button>
-            {onDeleteTag && (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="p-2 transition-colors"
-                style={{ color: 'var(--status-error)', backgroundColor: 'transparent', borderRadius: '6px' }}
-                title="Delete all content with this tag"
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--status-error-bg)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                <Trash2 size={18} strokeWidth={1.5} />
-              </button>
-            )}
-            <button
-              onClick={() => onPublish?.(tag)}
-              className="p-2 transition-colors"
-              style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', borderRadius: '6px', marginRight: '16px' }}
-              title="Publish"
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              <Rocket size={18} strokeWidth={1.5} />
-            </button>
-          </div>
+        {/* Center - tag name (like breadcrumb) */}
+        <div className="absolute left-1/2 transform -translate-x-1/2">
+          <span style={{ fontSize: '13.75px', color: 'var(--breadcrumb-text)' }}>
+            <span className="text-accent">#</span>{tag.substring(1)}
+          </span>
         </div>
+
+        {/* Right side - trash icon only */}
+        {onDeleteTag && (
+          <div className="flex items-center ml-auto">
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="p-1 rounded transition-all hover:opacity-60"
+              style={{ color: 'var(--status-error)', backgroundColor: 'transparent' }}
+              title="Delete all content with this tag"
+            >
+              <Trash2 size={18} strokeWidth={1.5} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -243,78 +214,38 @@ export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, 
         </div>
       )}
 
-      {/* Scrollable content area */}
+      {/* Scrollable content area - matches editor padding */}
       <div className="flex-1 overflow-auto">
-        <div className="space-y-6" style={{ padding: '24px 24px 24px 36px' }}>
+        <div className="space-y-6" style={{ padding: '16px 24px 24px 48px' }}>
           {content.map((item, index) => (
             <div
               key={`${item.date}-${index}`}
-              className="border-l-2 border-accent/50 py-1"
-              style={{ paddingLeft: '28px' }}
+              className="py-1"
             >
-              {/* Meta info */}
-              <div className="flex items-center gap-3 mb-3 text-sm">
-                <span className="font-medium text-obsidian-text-secondary">{item.date}</span>
-                <span className="text-obsidian-text-muted">•</span>
-                <span className="text-xs text-obsidian-text-muted">{item.filePath}</span>
-              </div>
+              {/* File path header */}
+              <h2 className="font-semibold mb-3" style={{ fontSize: '1.5em', lineHeight: '1.3', color: 'var(--text-muted)', marginTop: index === 0 ? '25px' : '32px' }}>
+                {item.filePath.replace('.md', '')}
+              </h2>
 
               {/* Content */}
-              {isEditMode ? (
-                <textarea
-                  value={editedContent[index] !== undefined ? editedContent[index] : item.content}
-                  onChange={(e) => {
-                    setEditedContent(prev => ({ ...prev, [index]: e.target.value }));
+              <div className="prose prose-sm max-w-none">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw, rehypeSanitize]}
+                  components={{
+                    a: ({ href, children }) => (
+                      <a href={href} style={{ color: 'var(--editor-link)', textDecoration: 'underline' }}>
+                        {children}
+                      </a>
+                    )
                   }}
-                  onBlur={async () => {
-                    const newContent = editedContent[index];
-                    if (newContent !== undefined && newContent !== item.content && onUpdateContent) {
-                      try {
-                        await onUpdateContent(item.filePath, item.content, newContent);
-                        // Update the local content state to reflect the save
-                        setContent(prev => prev.map((c, i) => i === index ? { ...c, content: newContent } : c));
-                      } catch (err: any) {
-                        console.error('Failed to save content:', err);
-                      }
-                    }
-                  }}
-                  className="w-full min-h-[100px] p-3 rounded-lg resize-y"
-                  style={{
-                    fontFamily: 'monospace',
-                    fontSize: '14px',
-                    lineHeight: '1.6',
-                    border: '1px solid var(--border-primary)',
-                    backgroundColor: 'var(--input-bg)',
-                    color: 'var(--input-text)'
-                  }}
-                />
-              ) : (
-                <div className="prose prose-sm max-w-none">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeRaw, rehypeSanitize]}
-                    components={{
-                      a: ({ href, children }) => (
-                        <a href={href} style={{ color: 'var(--editor-link)', textDecoration: 'underline' }}>
-                          {children}
-                        </a>
-                      )
-                    }}
-                  >
-                    {item.content}
-                  </ReactMarkdown>
-                </div>
-              )}
+                >
+                  {item.content}
+                </ReactMarkdown>
+              </div>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Footer note - fixed bottom right */}
-      <div className="flex-shrink-0 flex justify-end px-4 py-3">
-        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-          Read-only view aggregating all content tagged with {tag}
-        </span>
       </div>
     </div>
   );
