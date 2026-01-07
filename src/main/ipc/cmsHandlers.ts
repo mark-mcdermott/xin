@@ -240,6 +240,53 @@ export function registerCmsHandlers(): void {
       return { success: false, error: error.message };
     }
   });
+
+  // Rename a remote file
+  ipcMain.handle('cms:rename-file', async (
+    _event,
+    blogId: string,
+    oldPath: string,
+    newName: string,
+    sha: string
+  ) => {
+    try {
+      if (!configManager || !remotePostCache || !draftManager) {
+        return { success: false, error: 'CMS not initialized' };
+      }
+
+      // Get blog config
+      const config = await configManager.load();
+      const blog = config.blogs?.find((b: BlogTarget) => b.id === blogId);
+      if (!blog) {
+        return { success: false, error: 'Blog not found' };
+      }
+
+      // Calculate new path (same directory, new filename)
+      const pathParts = oldPath.split('/');
+      pathParts[pathParts.length - 1] = newName;
+      const newPath = pathParts.join('/');
+
+      // Create GitHub client and rename file
+      const client = new GitHubClient(blog.github.token);
+      const result = await client.renameFile(
+        blog.github.repo,
+        oldPath,
+        newPath,
+        blog.github.branch,
+        sha
+      );
+
+      // Clear any draft for the old path
+      draftManager.deleteDraft(blogId, oldPath);
+
+      // Refresh the blog's cache to pick up the rename
+      await remotePostCache.refreshBlog(blogId);
+
+      return { success: true, newPath, newSha: result.newSha };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 /**

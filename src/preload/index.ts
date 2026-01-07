@@ -99,7 +99,7 @@ export interface ElectronAPI {
 
   // Context menu operations
   contextMenu: {
-    showFileMenu: (filePath: string) => Promise<{ action: string } | null>;
+    showFileMenu: (filePath: string, options?: { isRemote?: boolean }) => Promise<{ action: string } | null>;
     showFolderMenu: (folderPath: string) => Promise<{ action: string } | null>;
     showSidebarMenu: () => Promise<{ action: string } | null>;
   };
@@ -121,6 +121,7 @@ export interface ElectronAPI {
     toBlog: (blogId: string, tag: string) => Promise<VaultResponse<{ jobId: string }>>;
     toBlogDirect: (blogId: string, content: string) => Promise<VaultResponse<{ jobId: string }>>;
     toCmsFile: (blogId: string, filePath: string, content: string, sha: string) => Promise<VaultResponse<{ jobId: string }>>;
+    renameCmsFile: (blogId: string, oldPath: string, newName: string, sha: string) => Promise<VaultResponse<{ jobId: string }>>;
     getStatus: (jobId: string) => Promise<
       VaultResponse<{ status: string; progress: number; steps: any[]; error?: string }>
     >;
@@ -141,6 +142,7 @@ export interface ElectronAPI {
     hasDraft: (blogId: string, path: string) => Promise<VaultResponse<{ hasDraft: boolean }>>;
     publishPost: (blogId: string, path: string, content: string, sha: string) => Promise<VaultResponse<{ newSha: string }>>;
     getModifiedPaths: (blogId: string) => Promise<VaultResponse<{ paths: string[] }>>;
+    renameFile: (blogId: string, oldPath: string, newName: string, sha: string) => Promise<VaultResponse<{ newPath: string; newSha: string }>>;
     onCacheUpdated: (callback: () => void) => void;
     removeCacheListener: () => void;
   };
@@ -197,7 +199,7 @@ const api: ElectronAPI = {
   },
 
   contextMenu: {
-    showFileMenu: (filePath: string) => ipcRenderer.invoke('context-menu:show-file', filePath),
+    showFileMenu: (filePath: string, options?: { isRemote?: boolean }) => ipcRenderer.invoke('context-menu:show-file', filePath, options),
     showFolderMenu: (folderPath: string) => ipcRenderer.invoke('context-menu:show-folder', folderPath),
     showSidebarMenu: () => ipcRenderer.invoke('context-menu:show-sidebar')
   },
@@ -224,6 +226,8 @@ const api: ElectronAPI = {
       ipcRenderer.invoke('publish:to-blog-direct', blogId, content),
     toCmsFile: (blogId: string, filePath: string, content: string, sha: string) =>
       ipcRenderer.invoke('publish:cms-file', blogId, filePath, content, sha),
+    renameCmsFile: (blogId: string, oldPath: string, newName: string, sha: string) =>
+      ipcRenderer.invoke('publish:cms-rename', blogId, oldPath, newName, sha),
     getStatus: (jobId: string) => ipcRenderer.invoke('publish:get-status', jobId),
     subscribe: async (jobId: string, callback: (data: any) => void) => {
       ipcRenderer.on(`publish:progress:${jobId}`, (_event, data) => callback(data));
@@ -254,6 +258,8 @@ const api: ElectronAPI = {
       ipcRenderer.invoke('cms:publish-post', blogId, path, content, sha),
     getModifiedPaths: (blogId: string) =>
       ipcRenderer.invoke('cms:get-modified-paths', blogId),
+    renameFile: (blogId: string, oldPath: string, newName: string, sha: string) =>
+      ipcRenderer.invoke('cms:rename-file', blogId, oldPath, newName, sha),
     onCacheUpdated: (callback: () => void) => {
       ipcRenderer.on('cms:cache-updated', () => callback());
     },

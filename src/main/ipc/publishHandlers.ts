@@ -182,6 +182,33 @@ export function registerPublishHandlers(): void {
     }
   });
 
+  // Rename CMS file with deployment tracking
+  ipcMain.handle('publish:cms-rename', async (_event, blogId: string, oldPath: string, newName: string, sha: string) => {
+    try {
+      if (!publishManager || !configManager) {
+        const vaultPath = vaultManager.getVaultPath();
+        if (!vaultPath) {
+          return { success: false, error: 'Vault not initialized' };
+        }
+        initializePublishManagers(vaultPath);
+      }
+
+      const blog = await configManager!.getBlog(blogId);
+      if (!blog) {
+        return { success: false, error: 'Blog not found' };
+      }
+
+      const jobId = await publishManager!.renameCmsFile(blog, oldPath, newName, sha);
+
+      // Track start time for this job
+      publishStartTimes.set(jobId, { startTime: Date.now(), blogId });
+
+      return { success: true, jobId };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // Get publish job status
   ipcMain.handle('publish:get-status', async (_event, jobId: string) => {
     try {
@@ -202,7 +229,8 @@ export function registerPublishHandlers(): void {
         error: job.error,
         slug: (job as any).slug,
         postUrl: job.postUrl,
-        newSha: (job as any).newSha
+        newSha: (job as any).newSha,
+        newPath: (job as any).newPath
       };
     } catch (error: any) {
       return { success: false, error: error.message };

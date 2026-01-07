@@ -21,6 +21,7 @@ interface FileTreeNodeProps {
   renamingPath: string | null;
   onStartRename?: (path: string) => void;
   onRenameSubmit?: (oldPath: string, newName: string) => void;
+  onRenameRemoteSubmit?: (blogId: string, oldPath: string, newName: string, sha: string) => void;
   onRenameCancel?: () => void;
   expandedPaths?: Set<string>; // Controlled expansion state
   onFolderToggle?: (path: string, expanded: boolean) => void;
@@ -45,6 +46,7 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
   renamingPath,
   onStartRename,
   onRenameSubmit,
+  onRenameRemoteSubmit,
   onRenameCancel,
   expandedPaths,
   onFolderToggle
@@ -146,7 +148,7 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
         }
       }
     } else {
-      const result = await window.electronAPI.contextMenu.showFileMenu(node.path);
+      const result = await window.electronAPI.contextMenu.showFileMenu(node.path, { isRemote });
       if (result) {
         switch (result.action) {
           case 'rename':
@@ -212,7 +214,14 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
             currentName={node.name}
             type={node.type}
             level={level}
-            onSubmit={(newName) => onRenameSubmit?.(node.path, newName)}
+            onSubmit={(newName) => {
+              if (isRemote && node.remoteMeta) {
+                const actualPath = node.path.replace(`remote:${node.remoteMeta.blogId}:`, '');
+                onRenameRemoteSubmit?.(node.remoteMeta.blogId, actualPath, newName, node.remoteMeta.sha);
+              } else {
+                onRenameSubmit?.(node.path, newName);
+              }
+            }}
             onCancel={() => onRenameCancel?.()}
           />
         ) : (
@@ -300,6 +309,7 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
                   renamingPath={renamingPath}
                   onStartRename={onStartRename}
                   onRenameSubmit={onRenameSubmit}
+                  onRenameRemoteSubmit={onRenameRemoteSubmit}
                   onRenameCancel={onRenameCancel}
                   expandedPaths={expandedPaths}
                   onFolderToggle={onFolderToggle}
@@ -511,6 +521,7 @@ interface FileTreeComponentProps {
   onDelete?: (path: string, type: 'file' | 'folder') => void;
   onMoveFile?: (sourcePath: string, destFolder: string) => void;
   onRename?: (oldPath: string, newName: string) => Promise<string | null>;
+  onRenameRemote?: (blogId: string, oldPath: string, newName: string, sha: string) => Promise<void>;
   inlineCreateType?: 'file' | 'folder' | null;
   onInlineCreate?: (name: string, type: 'file' | 'folder') => void;
   onInlineCancel?: () => void;
@@ -532,6 +543,7 @@ export const FileTree: React.FC<FileTreeComponentProps> = ({
   onDelete,
   onMoveFile,
   onRename,
+  onRenameRemote,
   inlineCreateType,
   onInlineCreate,
   onInlineCancel,
@@ -579,6 +591,13 @@ export const FileTree: React.FC<FileTreeComponentProps> = ({
     setRenamingPath(null);
   };
 
+  const handleRenameRemoteSubmit = async (blogId: string, oldPath: string, newName: string, sha: string) => {
+    if (onRenameRemote) {
+      await onRenameRemote(blogId, oldPath, newName, sha);
+    }
+    setRenamingPath(null);
+  };
+
   const handleRenameCancel = () => {
     setRenamingPath(null);
   };
@@ -622,6 +641,7 @@ export const FileTree: React.FC<FileTreeComponentProps> = ({
               renamingPath={renamingPath}
               onStartRename={handleStartRename}
               onRenameSubmit={handleRenameSubmit}
+              onRenameRemoteSubmit={handleRenameRemoteSubmit}
               onRenameCancel={handleRenameCancel}
               expandedPaths={expandedPaths}
               onFolderToggle={onFolderToggle}
@@ -658,6 +678,7 @@ export const FileTree: React.FC<FileTreeComponentProps> = ({
               renamingPath={renamingPath}
               onStartRename={handleStartRename}
               onRenameSubmit={handleRenameSubmit}
+              onRenameRemoteSubmit={handleRenameRemoteSubmit}
               onRenameCancel={handleRenameCancel}
               expandedPaths={expandedPaths}
               onFolderToggle={onFolderToggle}
