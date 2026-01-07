@@ -120,6 +120,7 @@ export interface ElectronAPI {
     deleteBlog: (blogId: string) => Promise<VaultResponse<{ deleted: boolean }>>;
     toBlog: (blogId: string, tag: string) => Promise<VaultResponse<{ jobId: string }>>;
     toBlogDirect: (blogId: string, content: string) => Promise<VaultResponse<{ jobId: string }>>;
+    toCmsFile: (blogId: string, filePath: string, content: string, sha: string) => Promise<VaultResponse<{ jobId: string }>>;
     getStatus: (jobId: string) => Promise<
       VaultResponse<{ status: string; progress: number; steps: any[]; error?: string }>
     >;
@@ -221,6 +222,8 @@ const api: ElectronAPI = {
       ipcRenderer.invoke('publish:to-blog', blogId, tag),
     toBlogDirect: (blogId: string, content: string) =>
       ipcRenderer.invoke('publish:to-blog-direct', blogId, content),
+    toCmsFile: (blogId: string, filePath: string, content: string, sha: string) =>
+      ipcRenderer.invoke('publish:cms-file', blogId, filePath, content, sha),
     getStatus: (jobId: string) => ipcRenderer.invoke('publish:get-status', jobId),
     subscribe: async (jobId: string, callback: (data: any) => void) => {
       ipcRenderer.on(`publish:progress:${jobId}`, (_event, data) => callback(data));

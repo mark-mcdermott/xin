@@ -52,7 +52,7 @@ type Tab =
 const App: React.FC = () => {
   const { vaultPath, fileTree, loading, error, readFile, writeFile, createFile, createFolder, deleteFile, moveFile, renameFile, getTodayNote, getDailyNote, getDailyNoteDates, refreshFileTree } = useVault();
   const { tags, loading: tagsLoading, getTagContent, deleteTag, refreshTags } = useTags();
-  const { remoteFolders, getPostContent, saveDraft, publishPost, hasDraft } = useRemotePosts();
+  const { remoteFolders, getPostContent, saveDraft, publishPost, hasDraft, refresh: refreshRemotePosts } = useRemotePosts();
 
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('files');
   const [openTabs, setOpenTabs] = useState<Tab[]>([]);
@@ -90,6 +90,14 @@ const App: React.FC = () => {
   const [blogBlockPublishError, setBlogBlockPublishError] = useState<string | null>(null);
   const [blogBlockPublishPostUrl, setBlogBlockPublishPostUrl] = useState<string | null>(null);
   const blogBlockPublishResolveRef = useRef<((result: { success: boolean; slug?: string }) => void) | null>(null);
+
+  // CMS remote publish state
+  const [cmsPublishJobId, setCmsPublishJobId] = useState<string | null>(null);
+  const [cmsPublishStatus, setCmsPublishStatus] = useState<'pending' | 'preparing' | 'pushing' | 'building' | 'deploying' | 'completed' | 'failed'>('pending');
+  const [cmsPublishProgress, setCmsPublishProgress] = useState(0);
+  const [cmsPublishSteps, setCmsPublishSteps] = useState<Array<{ name: string; status: 'pending' | 'in_progress' | 'completed' | 'failed'; message?: string }>>([]);
+  const [cmsPublishError, setCmsPublishError] = useState<string | null>(null);
+  const cmsPublishTabInfoRef = useRef<{ tabIndex: number; blogId: string; path: string } | null>(null);
 
   // Navigation history for back/forward
   type HistoryEntry = { type: 'file'; path: string } | { type: 'tag'; tag: string } | { type: 'settings' };
@@ -519,6 +527,42 @@ const App: React.FC = () => {
     };
   }, [blogBlockPublishJobId]);
 
+  // Subscribe to CMS publish job progress
+  useEffect(() => {
+    if (!cmsPublishJobId || cmsPublishJobId === 'error') return;
+
+    const subscribeToProgress = async () => {
+      await window.electronAPI.publish.subscribe(cmsPublishJobId, (data: any) => {
+        setCmsPublishStatus(data.status);
+        setCmsPublishProgress(data.progress);
+        setCmsPublishSteps(data.steps || []);
+        if (data.error) {
+          setCmsPublishError(data.error);
+        }
+        // When complete, update the tab with new SHA
+        if (data.status === 'completed' && cmsPublishTabInfoRef.current) {
+          const { tabIndex } = cmsPublishTabInfoRef.current;
+          // Get the new SHA from the job status
+          window.electronAPI.publish.getStatus(cmsPublishJobId).then(statusResult => {
+            if (statusResult.success && (statusResult as any).newSha) {
+              setOpenTabs(prev => prev.map((t, i) =>
+                i === tabIndex && t.type === 'remote-file'
+                  ? { ...t, sha: (statusResult as any).newSha, originalContent: t.content }
+                  : t
+              ));
+            }
+          });
+        }
+      });
+    };
+
+    subscribeToProgress();
+
+    return () => {
+      window.electronAPI.publish.unsubscribe(cmsPublishJobId);
+    };
+  }, [cmsPublishJobId]);
+
   const handleFileClick = async (path: string) => {
     try {
       // Check if file is already open
@@ -566,7 +610,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Handle publishing a remote file
+  // Handle publishing a remote file with deployment tracking
   const handlePublishRemote = async (blogId: string, path: string) => {
     // Find the tab with this remote file
     const tabIndex = openTabs.findIndex(
@@ -576,24 +620,49 @@ const App: React.FC = () => {
     if (tabIndex >= 0) {
       const tab = openTabs[tabIndex];
       if (tab.type === 'remote-file') {
+        // Store tab info for updating after publish completes
+        cmsPublishTabInfoRef.current = { tabIndex, blogId, path };
+
+        // Reset publish state
+        setCmsPublishStatus('pushing');
+        setCmsPublishProgress(0);
+        setCmsPublishSteps([]);
+        setCmsPublishError(null);
+
         try {
-          const newSha = await publishPost(blogId, path, tab.content, tab.sha);
-          // Update the tab with the new SHA and reset original content
-          setOpenTabs(prev => prev.map((t, i) =>
-            i === tabIndex && t.type === 'remote-file'
-              ? { ...t, sha: newSha, originalContent: t.content }
-              : t
-          ));
-          alert('Post published successfully!');
+          // Start the publish job
+          const result = await window.electronAPI.publish.toCmsFile(blogId, path, tab.content, tab.sha);
+          if (result.success && result.jobId) {
+            setCmsPublishJobId(result.jobId);
+          } else {
+            setCmsPublishStatus('failed');
+            setCmsPublishError(result.error || 'Failed to start publish');
+          }
         } catch (err: any) {
           console.error('Failed to publish:', err);
-          alert(`Failed to publish: ${err.message}`);
+          setCmsPublishStatus('failed');
+          setCmsPublishError(err.message || 'Failed to publish');
         }
       }
     } else {
-      // File not open, just show a message
-      alert('Please open the file first to publish changes');
+      // File not open, show error
+      setCmsPublishJobId('error');
+      setCmsPublishStatus('failed');
+      setCmsPublishError('Please open the file first to publish changes');
     }
+  };
+
+  // Close CMS publish popup
+  const handleCloseCmsPublish = () => {
+    if (cmsPublishJobId && cmsPublishJobId !== 'error') {
+      window.electronAPI.publish.unsubscribe(cmsPublishJobId);
+    }
+    setCmsPublishJobId(null);
+    setCmsPublishStatus('pending');
+    setCmsPublishProgress(0);
+    setCmsPublishSteps([]);
+    setCmsPublishError(null);
+    cmsPublishTabInfoRef.current = null;
   };
 
   const handleTabClick = (index: number) => {
@@ -1286,7 +1355,19 @@ const App: React.FC = () => {
         />
       )}
 
-      
+      {/* CMS Remote Publish Progress Popup */}
+      {cmsPublishJobId && (
+        <PublishProgressPopup
+          status={cmsPublishStatus}
+          progress={cmsPublishProgress}
+          steps={cmsPublishSteps}
+          error={cmsPublishError}
+          postUrl={null}
+          onClose={handleCloseCmsPublish}
+        />
+      )}
+
+
       {/* Create File/Folder Dialog */}
       <CreateFileDialog
         isOpen={createDialogOpen}
@@ -1595,7 +1676,7 @@ const App: React.FC = () => {
         <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
 
         {showSettings ? (
-          <SettingsPage vaultPath={vaultPath} onVaultSwitch={handleVaultSwitchFromSettings} />
+          <SettingsPage vaultPath={vaultPath} onVaultSwitch={handleVaultSwitchFromSettings} onBlogDeleted={refreshRemotePosts} />
         ) : activeFileTab ? (
           <>
             {/* Navigation bar with breadcrumb */}
@@ -1749,6 +1830,8 @@ const App: React.FC = () => {
                 onTagClick={handleEditorTagClick}
                 blogs={blogs}
                 onPublishBlogBlock={handlePublishBlogBlock}
+                isRemote={true}
+                onPublishRemote={() => handlePublishRemote(activeRemoteTab.blogId, activeRemoteTab.path)}
               />
             </div>
 

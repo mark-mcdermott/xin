@@ -111,7 +111,8 @@ export class GitHubClient {
     const data = await response.json();
     return {
       sha: data.commit.sha,
-      url: data.commit.html_url
+      url: data.commit.html_url,
+      contentSha: data.content?.sha  // File blob SHA for subsequent updates
     };
   }
 

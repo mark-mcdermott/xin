@@ -94,6 +94,48 @@ export class PublishManager {
   }
 
   /**
+   * Start a publish job for updating an existing CMS file
+   */
+  async publishCmsFile(
+    blogTarget: BlogTarget,
+    filePath: string,
+    content: string,
+    sha: string
+  ): Promise<string> {
+    const jobId = randomUUID();
+
+    const hasCloudflare = Boolean(blogTarget.cloudflare?.token);
+    const steps: PublishStep[] = [
+      { name: 'Pushing to GitHub', status: 'in_progress' }
+    ];
+
+    if (hasCloudflare) {
+      steps.push({ name: 'Waiting for Cloudflare deployment to finish', status: 'pending' });
+    }
+    steps.push({ name: 'Publish complete', status: 'pending' });
+
+    const job: PublishJob = {
+      id: jobId,
+      blogId: blogTarget.id,
+      tag: 'cms-update',
+      status: 'pushing',
+      progress: 10,
+      startedAt: Date.now(),
+      steps
+    };
+
+    this.jobs.set(jobId, job);
+    this.notifyProgress(jobId);
+
+    // Run publish workflow in background
+    this.runCmsPublishWorkflow(jobId, blogTarget, filePath, content, sha).catch(error => {
+      this.updateJobStatus(jobId, 'failed', 0, error.message);
+    });
+
+    return jobId;
+  }
+
+  /**
    * Get job status
    */
   getJob(jobId: string): PublishJob | undefined {
@@ -252,6 +294,72 @@ export class PublishManager {
       this.updateJobStatus(jobId, 'completed', 100);
     } catch (error) {
       console.error('PublishManager: Direct workflow error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.updateJobStatus(jobId, 'failed', 0, errorMessage);
+    }
+  }
+
+  private async runCmsPublishWorkflow(
+    jobId: string,
+    blogTarget: BlogTarget,
+    filePath: string,
+    content: string,
+    sha: string
+  ): Promise<void> {
+    try {
+      console.log('PublishManager: Starting CMS publish workflow');
+      console.log('  filePath:', filePath);
+      const hasCloudflare = Boolean(blogTarget.cloudflare?.token);
+
+      // Step 1: Push to GitHub
+      this.updateJobProgress(jobId, 'pushing', 20);
+
+      const githubClient = new GitHubClient(blogTarget.github.token);
+      const { repo, branch } = blogTarget.github;
+
+      const result = await githubClient.updateFile(
+        repo,
+        filePath,
+        content,
+        `Update ${filePath.split('/').pop()}`,
+        branch,
+        sha
+      );
+
+      const commitSha = result.sha;
+      const contentSha = result.contentSha;
+      this.updateStepStatus(jobId, 0, 'completed', `Pushed commit ${commitSha.slice(0, 7)}`);
+
+      // Store new file SHA in job for retrieval (contentSha is needed for subsequent updates)
+      (this.jobs.get(jobId) as any).newSha = contentSha;
+
+      // Step 2: Wait for Cloudflare deployment (if configured)
+      if (hasCloudflare && blogTarget.cloudflare) {
+        this.updateJobProgress(jobId, 'building', 40);
+        this.updateStepStatus(jobId, 1, 'in_progress');
+
+        const cloudflareClient = new CloudflareClient(
+          blogTarget.cloudflare.token,
+          blogTarget.cloudflare.accountId
+        );
+
+        await this.waitForCloudflareDeployment(
+          jobId,
+          cloudflareClient,
+          blogTarget,
+          commitSha
+        );
+
+        this.updateStepStatus(jobId, 1, 'completed', 'Deployment successful');
+        this.updateStepStatus(jobId, 2, 'completed');
+      } else {
+        // No Cloudflare config - just mark as complete
+        this.updateStepStatus(jobId, 1, 'completed');
+      }
+
+      this.updateJobStatus(jobId, 'completed', 100);
+    } catch (error) {
+      console.error('PublishManager: CMS workflow error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.updateJobStatus(jobId, 'failed', 0, errorMessage);
     }

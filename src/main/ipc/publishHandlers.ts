@@ -155,6 +155,33 @@ export function registerPublishHandlers(): void {
     }
   });
 
+  // Publish CMS file update with deployment tracking
+  ipcMain.handle('publish:cms-file', async (_event, blogId: string, filePath: string, content: string, sha: string) => {
+    try {
+      if (!publishManager || !configManager) {
+        const vaultPath = vaultManager.getVaultPath();
+        if (!vaultPath) {
+          return { success: false, error: 'Vault not initialized' };
+        }
+        initializePublishManagers(vaultPath);
+      }
+
+      const blog = await configManager!.getBlog(blogId);
+      if (!blog) {
+        return { success: false, error: 'Blog not found' };
+      }
+
+      const jobId = await publishManager!.publishCmsFile(blog, filePath, content, sha);
+
+      // Track start time for this job
+      publishStartTimes.set(jobId, { startTime: Date.now(), blogId });
+
+      return { success: true, jobId };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // Get publish job status
   ipcMain.handle('publish:get-status', async (_event, jobId: string) => {
     try {
@@ -174,7 +201,8 @@ export function registerPublishHandlers(): void {
         steps: job.steps,
         error: job.error,
         slug: (job as any).slug,
-        postUrl: job.postUrl
+        postUrl: job.postUrl,
+        newSha: (job as any).newSha
       };
     } catch (error: any) {
       return { success: false, error: error.message };
