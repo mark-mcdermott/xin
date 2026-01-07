@@ -517,6 +517,38 @@ class AtPostRocketWidget extends WidgetType {
   }
 }
 
+// Widget for rocket icon at end of title line in remote file frontmatter
+class RemoteFrontmatterRocketWidget extends WidgetType {
+  constructor() {
+    super();
+  }
+
+  toDOM() {
+    const wrapper = document.createElement('span');
+    wrapper.style.cssText = 'margin-left: 8px;';
+
+    const iconBtn = document.createElement('button');
+    iconBtn.innerHTML = ROCKET_ICON_SVG;
+    iconBtn.title = 'Publish changes to remote';
+    iconBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: inline-flex; align-items: center; color: #3f0c8d; vertical-align: middle;';
+    iconBtn.onmouseenter = () => { iconBtn.style.backgroundColor = '#f0f0f0'; };
+    iconBtn.onmouseleave = () => { iconBtn.style.backgroundColor = 'transparent'; };
+
+    iconBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.dispatchEvent(new CustomEvent('remote-publish-click'));
+    };
+
+    wrapper.appendChild(iconBtn);
+    return wrapper;
+  }
+
+  eq(_other: RemoteFrontmatterRocketWidget) {
+    return true; // All instances are equivalent
+  }
+}
+
 // Widget for @ blog post header (e.g., "@markmcdermott.io post")
 class AtPostHeaderWidget extends WidgetType {
   constructor(
@@ -654,7 +686,8 @@ const cursorPositionField = StateField.define<number>({
 function createDecorations(
   view: EditorView,
   onPublish?: (blogId: string, content: string) => void,
-  blogs?: Array<{ id: string; name: string }>
+  blogs?: Array<{ id: string; name: string }>,
+  isRemote?: boolean
 ): DecorationSet {
   const cursorPos = view.state.field(cursorPositionField);
   const decorations: Range<Decoration>[] = [];
@@ -670,6 +703,10 @@ function createDecorations(
   let inAtPost = false;
   let atPostBlogName = '';
   let atPostStartLine = -1;
+
+  // Remote file YAML frontmatter tracking (starts with --- on line 1)
+  let inRemoteFrontmatter = false;
+  let remoteFrontmatterDashCount = 0;
 
   for (let i = 1; i <= doc.lines; i++) {
     const line = doc.line(i);
@@ -687,6 +724,33 @@ function createDecorations(
       decorations.push(
         Decoration.line({ class: 'cm-hidden-line' }).range(line.from)
       );
+      continue;
+    }
+
+    // Track YAML frontmatter for remote files (starts with --- on line 1)
+    if (isRemote && lineText.trim() === '---') {
+      remoteFrontmatterDashCount++;
+      if (remoteFrontmatterDashCount === 1 && i === 1) {
+        // Opening --- on first line
+        inRemoteFrontmatter = true;
+      } else if (remoteFrontmatterDashCount === 2) {
+        // Closing ---
+        inRemoteFrontmatter = false;
+      }
+      continue;
+    }
+
+    // Add rocket icon to title line in remote file frontmatter
+    if (isRemote && inRemoteFrontmatter && lineText.match(/^title:\s*/)) {
+      // Add rocket icon at end of title line (only when cursor not on line)
+      if (!cursorOnThisLine) {
+        decorations.push(
+          Decoration.widget({
+            widget: new RemoteFrontmatterRocketWidget(),
+            side: 1
+          }).range(line.to)
+        );
+      }
       continue;
     }
 
@@ -1021,7 +1085,8 @@ function createDecorations(
 
 function createLivePreviewPlugin(
   onPublish?: (blogId: string, content: string) => void,
-  blogs?: Array<{ id: string; name: string }>
+  blogs?: Array<{ id: string; name: string }>,
+  isRemote?: boolean
 ) {
   return ViewPlugin.fromClass(
     class {
@@ -1029,14 +1094,14 @@ function createLivePreviewPlugin(
       lastSelectionLine: number;
 
       constructor(view: EditorView) {
-        this.decorations = createDecorations(view, onPublish, blogs);
+        this.decorations = createDecorations(view, onPublish, blogs, isRemote);
         this.lastSelectionLine = view.state.doc.lineAt(view.state.selection.main.head).number;
       }
 
       update(update: ViewUpdate) {
         // Always rebuild on doc changes
         if (update.docChanged) {
-          this.decorations = createDecorations(update.view, onPublish, blogs);
+          this.decorations = createDecorations(update.view, onPublish, blogs, isRemote);
           this.lastSelectionLine = update.view.state.doc.lineAt(update.view.state.selection.main.head).number;
           return;
         }
@@ -1047,7 +1112,7 @@ function createLivePreviewPlugin(
           const currentLine = update.view.state.doc.lineAt(update.view.state.selection.main.head).number;
           if (currentLine !== this.lastSelectionLine) {
             this.lastSelectionLine = currentLine;
-            this.decorations = createDecorations(update.view, onPublish, blogs);
+            this.decorations = createDecorations(update.view, onPublish, blogs, isRemote);
           }
         }
       }
@@ -1287,6 +1352,8 @@ interface LiveMarkdownEditorProps {
   blogs?: Array<{ id: string; name: string }>;
   onPublishBlogBlock?: (blogId: string, content: string) => Promise<{ success: boolean; slug?: string }>;
   contentPadding?: string; // CSS padding value, defaults to '40px 24px 24px 48px'
+  isRemote?: boolean; // Whether this is a remote CMS file
+  onPublishRemote?: () => void; // Callback to publish remote file changes
 }
 
 // Helper to check if a position is inside a === blog block
@@ -1356,7 +1423,9 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   onTagClick,
   blogs = [],
   onPublishBlogBlock,
-  contentPadding = '40px 24px 24px 48px'
+  contentPadding = '40px 24px 24px 48px',
+  isRemote = false,
+  onPublishRemote
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -1370,6 +1439,9 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
 
   const onPublishBlogBlockRef = useRef(onPublishBlogBlock);
   onPublishBlogBlockRef.current = onPublishBlogBlock;
+
+  const onPublishRemoteRef = useRef(onPublishRemote);
+  onPublishRemoteRef.current = onPublishRemote;
 
   // Create padding override theme if custom padding is provided
   const paddingTheme = useMemo(() => {
@@ -1803,7 +1875,7 @@ tags: [""]
           defaultKeymap: true
         }),
         // Pass stable boolean for hasPublish (actual callback is in ref)
-        createLivePreviewPlugin(onPublishBlogBlockRef.current ? () => {} : undefined, blogsRef.current),
+        createLivePreviewPlugin(onPublishBlogBlockRef.current ? () => {} : undefined, blogsRef.current, isRemote),
         editorTheme,
         paddingTheme,
         updateListener,
@@ -2131,11 +2203,20 @@ tags: [""]
       }
     };
 
+    // Handle remote file publish click
+    const handleRemotePublishClick = () => {
+      if (onPublishRemoteRef.current) {
+        onPublishRemoteRef.current();
+      }
+    };
+
     window.addEventListener('blog-publish-click', handlePublishClick);
     window.addEventListener('at-post-publish-click', handleAtPostPublishClick);
+    window.addEventListener('remote-publish-click', handleRemotePublishClick);
     return () => {
       window.removeEventListener('blog-publish-click', handlePublishClick);
       window.removeEventListener('at-post-publish-click', handleAtPostPublishClick);
+      window.removeEventListener('remote-publish-click', handleRemotePublishClick);
     };
     // onPublishBlogBlock accessed via ref to avoid re-registering listeners
   }, [scheduleSave]);

@@ -51,13 +51,15 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
 }) => {
   const isRemote = node.source === 'remote';
   // Use controlled expansion if expandedPaths is provided, otherwise use local state
-  const [localExpanded, setLocalExpanded] = useState(level < 2);
+  // Default to collapsed on initial load
+  const [localExpanded, setLocalExpanded] = useState(false);
   const isExpanded = expandedPaths ? expandedPaths.has(node.path) : localExpanded;
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleClick = () => {
     if (node.type === 'folder') {
-      if (onFolderToggle) {
+      // Only use controlled mode when expandedPaths is provided
+      if (expandedPaths !== undefined && onFolderToggle) {
         onFolderToggle(node.path, !isExpanded);
       } else {
         setLocalExpanded(!localExpanded);

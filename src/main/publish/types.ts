@@ -58,8 +58,9 @@ export interface PublishStep {
 }
 
 export interface GitHubCommitResponse {
-  sha: string;
+  sha: string;  // Commit SHA
   url: string;
+  contentSha?: string;  // File blob SHA (for subsequent updates)
 }
 
 export type CloudflareDeploymentStage = 'queued' | 'initialize' | 'clone_repo' | 'build' | 'deploy' | 'success' | 'failure' | 'canceled';

@@ -35,9 +35,10 @@ interface BlogTarget {
 interface SettingsPageProps {
   vaultPath?: string | null;
   onVaultSwitch?: () => Promise<void>;
+  onBlogDeleted?: () => Promise<void>;
 }
 
-export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch }) => {
+export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch, onBlogDeleted }) => {
   const [blogs, setBlogs] = useState<BlogTarget[]>([]);
   const [editingBlog, setEditingBlog] = useState<BlogTarget | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +47,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch }) => 
   const [vaults, setVaults] = useState<VaultEntry[]>([]);
   const [activeVaultId, setActiveVaultId] = useState<string | null>(null);
   const [deleteVaultConfirm, setDeleteVaultConfirm] = useState<VaultEntry | null>(null);
+  const [deleteBlogConfirm, setDeleteBlogConfirm] = useState<BlogTarget | null>(null);
 
   useEffect(() => {
     loadBlogs();
@@ -160,15 +162,22 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch }) => 
     }
   };
 
-  const handleDeleteBlog = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this blog configuration?')) {
-      return;
-    }
+  const handleDeleteBlogClick = (blog: BlogTarget) => {
+    setDeleteBlogConfirm(blog);
+  };
+
+  const handleDeleteBlogConfirm = async () => {
+    if (!deleteBlogConfirm) return;
 
     try {
-      const result = await window.electronAPI.publish.deleteBlog(id);
+      const result = await window.electronAPI.publish.deleteBlog(deleteBlogConfirm.id);
       if (result.success) {
+        setDeleteBlogConfirm(null);
         await loadBlogs();
+        // Refresh remote folders in file tree
+        if (onBlogDeleted) {
+          await onBlogDeleted();
+        }
       }
     } catch (error) {
       console.error('Failed to delete blog:', error);
@@ -630,6 +639,18 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch }) => 
           onCancel={() => setDeleteVaultConfirm(null)}
         />
 
+        {/* Delete Blog Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={deleteBlogConfirm !== null}
+          title="Delete Blog"
+          message="Are you sure you want to delete this blog? (this has no effect on the live blog)"
+          confirmText="Delete"
+          cancelText="Cancel"
+          variant="danger"
+          onConfirm={handleDeleteBlogConfirm}
+          onCancel={() => setDeleteBlogConfirm(null)}
+        />
+
         {/* Blogs Section */}
         <div>
           <div className="flex items-center justify-between" style={{ marginBottom: '20px' }}>
@@ -677,7 +698,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch }) => 
                       <Edit2 size={16} strokeWidth={1.5} />
                     </button>
                     <button
-                      onClick={() => handleDeleteBlog(blog.id)}
+                      onClick={() => handleDeleteBlogClick(blog)}
                       className="p-2 rounded-lg transition-all hover:bg-red-50 hover:opacity-60"
                       style={{ color: 'var(--status-error)', backgroundColor: 'transparent' }}
                       title="Delete"
