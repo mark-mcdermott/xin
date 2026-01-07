@@ -52,7 +52,7 @@ type Tab =
 const App: React.FC = () => {
   const { vaultPath, fileTree, loading, error, readFile, writeFile, createFile, createFolder, deleteFile, moveFile, renameFile, getTodayNote, getDailyNote, getDailyNoteDates, refreshFileTree } = useVault();
   const { tags, loading: tagsLoading, getTagContent, deleteTag, refreshTags } = useTags();
-  const { remoteFolders, getPostContent, saveDraft, publishPost, hasDraft, refresh: refreshRemotePosts } = useRemotePosts();
+  const { remoteFolders, getPostContent, saveDraft, publishPost, hasDraft, refresh: refreshRemotePosts, refreshBlog, renameFile: renameRemoteFile } = useRemotePosts();
 
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('files');
   const [openTabs, setOpenTabs] = useState<Tab[]>([]);
@@ -539,19 +539,34 @@ const App: React.FC = () => {
         if (data.error) {
           setCmsPublishError(data.error);
         }
-        // When complete, update the tab with new SHA
+        // When complete, handle based on job type
         if (data.status === 'completed' && cmsPublishTabInfoRef.current) {
-          const { tabIndex } = cmsPublishTabInfoRef.current;
-          // Get the new SHA from the job status
-          window.electronAPI.publish.getStatus(cmsPublishJobId).then(statusResult => {
-            if (statusResult.success && (statusResult as any).newSha) {
-              setOpenTabs(prev => prev.map((t, i) =>
-                i === tabIndex && t.type === 'remote-file'
-                  ? { ...t, sha: (statusResult as any).newSha, originalContent: t.content }
-                  : t
-              ));
-            }
-          });
+          const tabInfo = cmsPublishTabInfoRef.current as any;
+
+          if (tabInfo.isRename) {
+            // For rename jobs, close any tab for the old path
+            const { blogId, path: oldPath } = tabInfo;
+            setOpenTabs(prev => {
+              const filtered = prev.filter(tab =>
+                !(tab.type === 'remote-file' && tab.blogId === blogId && tab.path === oldPath)
+              );
+              return filtered;
+            });
+            // Refresh the specific blog from GitHub to show renamed file
+            refreshBlog(blogId);
+          } else {
+            // For publish jobs, update the tab with new SHA
+            const { tabIndex } = tabInfo;
+            window.electronAPI.publish.getStatus(cmsPublishJobId).then(statusResult => {
+              if (statusResult.success && (statusResult as any).newSha) {
+                setOpenTabs(prev => prev.map((t, i) =>
+                  i === tabIndex && t.type === 'remote-file'
+                    ? { ...t, sha: (statusResult as any).newSha, originalContent: t.content }
+                    : t
+                ));
+              }
+            });
+          }
         }
       });
     };
@@ -561,7 +576,7 @@ const App: React.FC = () => {
     return () => {
       window.electronAPI.publish.unsubscribe(cmsPublishJobId);
     };
-  }, [cmsPublishJobId]);
+  }, [cmsPublishJobId, refreshRemotePosts]);
 
   const handleFileClick = async (path: string) => {
     try {
@@ -1012,6 +1027,33 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error('Failed to rename file:', err);
       return null;
+    }
+  };
+
+  // Handle remote file rename (shows progress notification)
+  const handleRenameRemoteFile = async (blogId: string, oldPath: string, newName: string, sha: string): Promise<void> => {
+    // Store rename info for updating tabs after job completes
+    cmsPublishTabInfoRef.current = { tabIndex: -1, blogId, path: oldPath, isRename: true, newName } as any;
+
+    // Reset publish state
+    setCmsPublishStatus('pushing');
+    setCmsPublishProgress(0);
+    setCmsPublishSteps([]);
+    setCmsPublishError(null);
+
+    try {
+      // Start the rename job
+      const result = await renameRemoteFile(blogId, oldPath, newName, sha);
+      if (result.jobId) {
+        setCmsPublishJobId(result.jobId);
+      } else {
+        setCmsPublishStatus('failed');
+        setCmsPublishError('Failed to start rename');
+      }
+    } catch (err: any) {
+      console.error('Failed to rename remote file:', err);
+      setCmsPublishStatus('failed');
+      setCmsPublishError(err.message || 'Failed to rename');
     }
   };
 
@@ -1544,6 +1586,7 @@ const App: React.FC = () => {
                 onDelete={handleDeleteFile}
                 onMoveFile={handleMoveFile}
                 onRename={handleRenameFile}
+                onRenameRemote={handleRenameRemoteFile}
                 inlineCreateType={inlineCreateType}
                 onInlineCreate={handleInlineCreate}
                 onInlineCancel={handleInlineCancel}

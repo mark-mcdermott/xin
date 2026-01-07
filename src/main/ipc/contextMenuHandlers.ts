@@ -5,7 +5,7 @@ import { ipcMain, Menu, BrowserWindow } from 'electron';
  */
 export function registerContextMenuHandlers(): void {
   // Show file context menu
-  ipcMain.handle('context-menu:show-file', async (_event, filePath: string) => {
+  ipcMain.handle('context-menu:show-file', async (_event, filePath: string, options?: { isRemote?: boolean }) => {
     return new Promise<{ action: string } | null>((resolve) => {
       const menu = Menu.buildFromTemplate([
         {

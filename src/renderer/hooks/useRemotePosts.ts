@@ -14,6 +14,7 @@ interface UseRemotePostsReturn {
   hasDraft: (blogId: string, path: string) => Promise<boolean>;
   publishPost: (blogId: string, path: string, content: string, sha: string) => Promise<string>;
   getModifiedPaths: (blogId: string) => Promise<string[]>;
+  renameFile: (blogId: string, oldPath: string, newName: string, sha: string) => Promise<{ jobId: string }>;
 }
 
 export const useRemotePosts = (): UseRemotePostsReturn => {
@@ -124,6 +125,15 @@ export const useRemotePosts = (): UseRemotePostsReturn => {
     return result.paths;
   }, []);
 
+  // Rename a remote file (returns jobId for progress tracking)
+  const renameFile = useCallback(async (blogId: string, oldPath: string, newName: string, sha: string) => {
+    const result = await window.electronAPI.publish.renameCmsFile(blogId, oldPath, newName, sha);
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to start rename');
+    }
+    return { jobId: result.jobId };
+  }, []);
+
   // Load on mount and listen for cache updates
   useEffect(() => {
     refresh();
@@ -150,6 +160,7 @@ export const useRemotePosts = (): UseRemotePostsReturn => {
     discardDraft,
     hasDraft,
     publishPost,
-    getModifiedPaths
+    getModifiedPaths,
+    renameFile
   };
 };

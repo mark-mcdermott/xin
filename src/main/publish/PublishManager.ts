@@ -136,6 +136,48 @@ export class PublishManager {
   }
 
   /**
+   * Start a rename job for a CMS file with deployment tracking
+   */
+  async renameCmsFile(
+    blogTarget: BlogTarget,
+    oldPath: string,
+    newName: string,
+    sha: string
+  ): Promise<string> {
+    const jobId = randomUUID();
+
+    const hasCloudflare = Boolean(blogTarget.cloudflare?.token);
+    const steps: PublishStep[] = [
+      { name: 'Renaming file on GitHub', status: 'in_progress' }
+    ];
+
+    if (hasCloudflare) {
+      steps.push({ name: 'Waiting for Cloudflare deployment to finish', status: 'pending' });
+    }
+    steps.push({ name: 'Rename complete', status: 'pending' });
+
+    const job: PublishJob = {
+      id: jobId,
+      blogId: blogTarget.id,
+      tag: 'cms-rename',
+      status: 'pushing',
+      progress: 10,
+      startedAt: Date.now(),
+      steps
+    };
+
+    this.jobs.set(jobId, job);
+    this.notifyProgress(jobId);
+
+    // Run rename workflow in background
+    this.runCmsRenameWorkflow(jobId, blogTarget, oldPath, newName, sha).catch(error => {
+      this.updateJobStatus(jobId, 'failed', 0, error.message);
+    });
+
+    return jobId;
+  }
+
+  /**
    * Get job status
    */
   getJob(jobId: string): PublishJob | undefined {
@@ -360,6 +402,77 @@ export class PublishManager {
       this.updateJobStatus(jobId, 'completed', 100);
     } catch (error) {
       console.error('PublishManager: CMS workflow error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.updateJobStatus(jobId, 'failed', 0, errorMessage);
+    }
+  }
+
+  private async runCmsRenameWorkflow(
+    jobId: string,
+    blogTarget: BlogTarget,
+    oldPath: string,
+    newName: string,
+    sha: string
+  ): Promise<void> {
+    try {
+      console.log('PublishManager: Starting CMS rename workflow');
+      console.log('  oldPath:', oldPath);
+      console.log('  newName:', newName);
+      const hasCloudflare = Boolean(blogTarget.cloudflare?.token);
+
+      // Calculate new path
+      const pathParts = oldPath.split('/');
+      pathParts[pathParts.length - 1] = newName;
+      const newPath = pathParts.join('/');
+
+      // Step 1: Rename on GitHub (single commit)
+      this.updateJobProgress(jobId, 'pushing', 20);
+
+      const githubClient = new GitHubClient(blogTarget.github.token);
+      const { repo, branch } = blogTarget.github;
+
+      const result = await githubClient.renameFile(
+        repo,
+        oldPath,
+        newPath,
+        branch,
+        sha
+      );
+
+      const commitSha = result.commitSha;
+      this.updateStepStatus(jobId, 0, 'completed', `Pushed commit ${commitSha.slice(0, 7)}`);
+
+      // Store info in job for retrieval
+      (this.jobs.get(jobId) as any).newPath = newPath;
+      (this.jobs.get(jobId) as any).newSha = result.newSha;
+
+      // Step 2: Wait for Cloudflare deployment (if configured)
+      if (hasCloudflare && blogTarget.cloudflare) {
+        this.updateJobProgress(jobId, 'building', 40);
+        this.updateStepStatus(jobId, 1, 'in_progress');
+
+        const cloudflareClient = new CloudflareClient(
+          blogTarget.cloudflare.token,
+          blogTarget.cloudflare.accountId
+        );
+
+        await this.waitForCloudflareDeployment(
+          jobId,
+          cloudflareClient,
+          blogTarget,
+          commitSha
+        );
+
+        this.updateStepStatus(jobId, 1, 'completed', 'Deployment successful');
+        this.updateStepStatus(jobId, 2, 'completed');
+      } else {
+        // No Cloudflare config - just mark as complete
+        this.updateStepStatus(jobId, 1, 'completed');
+      }
+
+      this.updateJobStatus(jobId, 'completed', 100);
+    } catch (error) {
+      console.error('PublishManager: CMS rename workflow error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.updateJobStatus(jobId, 'failed', 0, errorMessage);
     }
