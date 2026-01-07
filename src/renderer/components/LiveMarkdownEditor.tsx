@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import { EditorState, StateField, Text, Range } from '@codemirror/state';
 import {
   EditorView,
@@ -1286,6 +1286,7 @@ interface LiveMarkdownEditorProps {
   onTagClick?: (tag: string, newTab: boolean) => void;
   blogs?: Array<{ id: string; name: string }>;
   onPublishBlogBlock?: (blogId: string, content: string) => Promise<{ success: boolean; slug?: string }>;
+  contentPadding?: string; // CSS padding value, defaults to '40px 24px 24px 48px'
 }
 
 // Helper to check if a position is inside a === blog block
@@ -1354,7 +1355,8 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   onSave,
   onTagClick,
   blogs = [],
-  onPublishBlogBlock
+  onPublishBlogBlock,
+  contentPadding = '40px 24px 24px 48px'
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -1368,6 +1370,15 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
 
   const onPublishBlogBlockRef = useRef(onPublishBlogBlock);
   onPublishBlogBlockRef.current = onPublishBlogBlock;
+
+  // Create padding override theme if custom padding is provided
+  const paddingTheme = useMemo(() => {
+    return EditorView.theme({
+      '.cm-content': {
+        padding: `${contentPadding} !important`
+      }
+    });
+  }, [contentPadding]);
 
   // Generate blog block template
   const getBlogBlockTemplate = useCallback(() => {
@@ -1794,6 +1805,7 @@ tags: [""]
         // Pass stable boolean for hasPublish (actual callback is in ref)
         createLivePreviewPlugin(onPublishBlogBlockRef.current ? () => {} : undefined, blogsRef.current),
         editorTheme,
+        paddingTheme,
         updateListener,
         EditorView.lineWrapping
       ]
@@ -1814,7 +1826,7 @@ tags: [""]
       view.destroy();
     };
     // Note: onPublishBlogBlock and blogs are accessed via refs to avoid recreating editor
-  }, [getBlogBlockTemplate, blogCompletionSource, atBlogCompletionSource]);
+  }, [getBlogBlockTemplate, blogCompletionSource, atBlogCompletionSource, paddingTheme]);
 
   // Update content when file changes externally (not from our own save)
   useEffect(() => {
