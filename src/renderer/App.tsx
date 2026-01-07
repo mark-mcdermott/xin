@@ -1420,8 +1420,8 @@ const App: React.FC = () => {
 
       {/* Top bar - spans full width */}
       <div className="h-[45px] flex items-center" style={{ backgroundColor: 'var(--tab-bar-bg)', borderBottom: '1px solid var(--border-primary)' }}>
-        {/* Left section - same width as both sidebars (44px + 1px border + sidebarWidth, or just auto when collapsed) */}
-        <div className="h-full flex items-center" style={{ width: sidebarCollapsed ? 'auto' : `${44 + 1 + sidebarWidth}px`, borderRight: sidebarCollapsed ? 'none' : '1px solid var(--border-primary)', WebkitAppRegion: 'drag' } as React.CSSProperties}>
+        {/* Left section - same width as both sidebars (44px + 1px border + 2px alignment + sidebarWidth, or just auto when collapsed) */}
+        <div className="h-full flex items-center" style={{ width: sidebarCollapsed ? 'auto' : `${44 + 1 + 2 + sidebarWidth}px`, borderRight: sidebarCollapsed ? 'none' : '1px solid var(--border-primary)', WebkitAppRegion: 'drag' } as React.CSSProperties}>
           {/* macOS traffic light space */}
           <div className="w-[70px] h-full" />
 
