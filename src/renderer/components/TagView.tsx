@@ -237,7 +237,7 @@ export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, 
                   lineHeight: '1.3',
                   color: 'var(--text-muted)',
                   marginTop: index === 0 ? '25px' : '48px',
-                  marginBottom: '8px',
+                  marginBottom: '0',
                   paddingLeft: '48px'
                 }}
               >
@@ -245,7 +245,7 @@ export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, 
               </h2>
 
               {/* Content - editable with LiveMarkdownEditor */}
-              <div style={{ marginLeft: '48px', marginRight: '24px' }}>
+              <div style={{ marginRight: '24px' }}>
                 <LiveMarkdownEditor
                   initialContent={item.content}
                   filePath={item.filePath}
@@ -260,6 +260,7 @@ export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, 
                   }}
                   onTagClick={onTagClick}
                   blogs={blogs}
+                  contentPadding="10px 24px 24px 48px"
                 />
               </div>
             </div>
