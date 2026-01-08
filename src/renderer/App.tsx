@@ -22,7 +22,9 @@ import {
   BookOpen,
   FolderTree,
   Hash,
-  Eye
+  Eye,
+  Type,
+  CaseSensitive
 } from 'lucide-react';
 import { useVault } from './hooks/useVault';
 import { useTags } from './hooks/useTags';
@@ -1808,10 +1810,13 @@ const App: React.FC = () => {
                 </div>
                 */}
                 <div className="flex items-center gap-1">
-                  <Pencil size={12} strokeWidth={1.5} style={{ marginRight: '3px' }} />
-                  <span>{getWordCount(fileContent)} {getWordCount(fileContent) === 1 ? 'word' : 'words'}</span>
+                  <CaseSensitive size={20} strokeWidth={1.5} style={{ marginRight: '8px' }} />
+                  <span style={{ position: 'relative', top: '-1px' }}>{getWordCount(fileContent)} {getWordCount(fileContent) === 1 ? 'word' : 'words'}</span>
                 </div>
-                <span>{getCharCount(fileContent)} {getCharCount(fileContent) === 1 ? 'character' : 'characters'}</span>
+                <div className="flex items-center gap-1">
+                  <Type size={14} strokeWidth={2} style={{ marginRight: '7px', position: 'relative', top: '-1px' }} />
+                  <span style={{ position: 'relative', top: '-1px' }}>{getCharCount(fileContent)} {getCharCount(fileContent) === 1 ? 'character' : 'characters'}</span>
+                </div>
               </div>
             </div>
           </>
@@ -1882,10 +1887,13 @@ const App: React.FC = () => {
             <div className="flex items-center justify-end">
               <div className="flex items-center" style={{ color: 'var(--status-bar-text)', gap: '28px', backgroundColor: 'var(--status-bar-bg)', padding: '6px 13px', fontSize: '12.75px', borderTop: '1px solid var(--border-primary)', borderLeft: '1px solid var(--border-primary)', borderTopLeftRadius: '8px' }}>
                 <div className="flex items-center gap-1">
-                  <Pencil size={12} strokeWidth={1.5} style={{ marginRight: '3px' }} />
-                  <span>{getWordCount(activeRemoteTab.content)} {getWordCount(activeRemoteTab.content) === 1 ? 'word' : 'words'}</span>
+                  <CaseSensitive size={20} strokeWidth={1.5} style={{ marginRight: '8px' }} />
+                  <span style={{ position: 'relative', top: '-1px' }}>{getWordCount(activeRemoteTab.content)} {getWordCount(activeRemoteTab.content) === 1 ? 'word' : 'words'}</span>
                 </div>
-                <span>{getCharCount(activeRemoteTab.content)} {getCharCount(activeRemoteTab.content) === 1 ? 'character' : 'characters'}</span>
+                <div className="flex items-center gap-1">
+                  <Type size={14} strokeWidth={2} style={{ marginRight: '7px', position: 'relative', top: '-1px' }} />
+                  <span style={{ position: 'relative', top: '-1px' }}>{getCharCount(activeRemoteTab.content)} {getCharCount(activeRemoteTab.content) === 1 ? 'character' : 'characters'}</span>
+                </div>
               </div>
             </div>
           </>
