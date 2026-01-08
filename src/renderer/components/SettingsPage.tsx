@@ -36,9 +36,10 @@ interface SettingsPageProps {
   vaultPath?: string | null;
   onVaultSwitch?: () => Promise<void>;
   onBlogDeleted?: () => Promise<void>;
+  onOpenMerch?: () => void;
 }
 
-export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch, onBlogDeleted }) => {
+export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch, onBlogDeleted, onOpenMerch }) => {
   const [blogs, setBlogs] = useState<BlogTarget[]>([]);
   const [editingBlog, setEditingBlog] = useState<BlogTarget | null>(null);
   const [loading, setLoading] = useState(true);
@@ -717,7 +718,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch, onBlo
           <div className="flex items-center gap-3" style={{ marginBottom: '16px' }}>
             <Coffee size={20} strokeWidth={1.5} style={{ color: 'var(--text-muted)', marginRight: '8px' }} />
             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
-              Xin is free, but you can support by purchasing some Xin merch or buying me a coffee if you're enjoying it.
+              Xin is free, but you can support by purchasing some Xin{' '}
+              <span
+                onClick={onOpenMerch}
+                style={{ color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                merch
+              </span>
+              {' '}or buying me a coffee if you're enjoying it.
             </p>
           </div>
           <div className="flex items-center gap-3">
