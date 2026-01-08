@@ -40,6 +40,7 @@ import { Breadcrumb } from './components/Breadcrumb';
 import { PublishDialog } from './components/PublishDialog';
 import { PublishProgressPopup } from './components/PublishProgressPopup';
 import { SettingsPage } from './components/SettingsPage';
+import { MerchPage } from './components/MerchPage';
 import { CreateFileDialog } from './components/CreateFileDialog';
 import { VaultSelectionDialog } from './components/VaultSelectionDialog';
 import logoLeftFacing from './assets/pink-and-gray-mech-left.png';
@@ -61,6 +62,7 @@ const App: React.FC = () => {
   const [openTabs, setOpenTabs] = useState<Tab[]>([]);
   const [activeTabIndex, setActiveTabIndex] = useState<number>(-1);
   const [showSettings, setShowSettings] = useState(false);
+  const [showMerch, setShowMerch] = useState(false);
   const [dailyNoteDates, setDailyNoteDates] = useState<string[]>([]);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [editorViewMode, setEditorViewMode] = useState<EditorViewMode>('editor');
@@ -686,6 +688,7 @@ const App: React.FC = () => {
     const tab = openTabs[index];
     setActiveTabIndex(index);
     setShowSettings(false);
+    setShowMerch(false);
     if (tab) {
       if (tab.type === 'file') {
         pushToHistory({ type: 'file', path: tab.path });
@@ -1431,11 +1434,11 @@ const App: React.FC = () => {
 
         {/* Tab bar in title bar */}
         <div className="flex items-end h-full flex-1" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
-          {(openTabs.length > 0 || showSettings) && (
+          {(openTabs.length > 0 || showSettings || showMerch) && (
             <div className="flex items-end h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
               {/* All Tabs (file, tag, and remote-file) */}
               {openTabs.map((tab, index) => {
-                const isActive = index === activeTabIndex && !showSettings;
+                const isActive = index === activeTabIndex && !showSettings && !showMerch;
                 const tabKey = tab.type === 'file' ? tab.path : tab.type === 'remote-file' ? `remote-${tab.blogId}-${tab.path}` : `tag-${tab.tag}`;
                 const tabLabel = tab.type === 'file' ? getFileName(tab.path) : tab.type === 'remote-file' ? getFileName(tab.path) : tab.tag;
                 return (
@@ -1474,10 +1477,47 @@ const App: React.FC = () => {
                 <div
                   className="flex items-center justify-between cursor-pointer"
                   style={{
+                    backgroundColor: showMerch ? 'var(--tab-inactive-bg)' : 'var(--tab-active-bg)',
+                    border: '1px solid var(--border-primary)',
+                    borderBottom: showMerch ? 'none' : '1px solid var(--tab-active-bg)',
+                    marginLeft: openTabs.length === 0 ? (sidebarCollapsed ? '15px' : '12px') : '6px',
+                    height: 'calc(100% - 8px)',
+                    width: '180px',
+                    paddingLeft: '10px',
+                    paddingRight: '6px',
+                    borderTopLeftRadius: '8px',
+                    borderTopRightRadius: '8px',
+                    marginBottom: showMerch ? '0' : '-1px'
+                  }}
+                  onClick={() => setShowMerch(false)}
+                >
+                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: showMerch ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)' }}>
+                    <Settings size={14} strokeWidth={1.5} style={{ marginRight: '5px' }} />
+                    Settings
+                  </span>
+                  <button
+                    className="p-0.5 rounded transition-all flex items-center justify-center hover:bg-[var(--tab-close-hover)] hover:opacity-60"
+                    style={{ color: showMerch ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)', backgroundColor: 'transparent' }}
+                    title="Close settings"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowSettings(false);
+                      setShowMerch(false);
+                    }}
+                  >
+                    <X size={16} strokeWidth={2} />
+                  </button>
+                </div>
+              )}
+              {/* Merch Tab */}
+              {showMerch && (
+                <div
+                  className="flex items-center justify-between cursor-pointer"
+                  style={{
                     backgroundColor: 'var(--tab-active-bg)',
                     border: '1px solid var(--border-primary)',
                     borderBottom: '1px solid var(--tab-active-bg)',
-                    marginLeft: openTabs.length === 0 ? (sidebarCollapsed ? '15px' : '12px') : '6px',
+                    marginLeft: showSettings ? '6px' : (openTabs.length === 0 ? (sidebarCollapsed ? '15px' : '12px') : '6px'),
                     height: 'calc(100% - 8px)',
                     width: '180px',
                     paddingLeft: '10px',
@@ -1488,16 +1528,16 @@ const App: React.FC = () => {
                   }}
                 >
                   <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: 'var(--tab-active-text)' }}>
-                    <Settings size={14} strokeWidth={1.5} style={{ marginRight: '5px' }} />
-                    Settings
+                    <ShoppingCart size={14} strokeWidth={1.5} style={{ marginRight: '5px' }} />
+                    Merch
                   </span>
                   <button
                     className="p-0.5 rounded transition-all flex items-center justify-center hover:bg-[var(--tab-close-hover)] hover:opacity-60"
                     style={{ color: 'var(--tab-active-text)', backgroundColor: 'transparent' }}
-                    title="Close settings"
+                    title="Close merch"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowSettings(false);
+                      setShowMerch(false);
                     }}
                   >
                     <X size={16} strokeWidth={2} />
@@ -1629,7 +1669,7 @@ const App: React.FC = () => {
             <Code size={20} strokeWidth={1.5} />
           </button>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Shop" onClick={() => window.open('https://shop.xun.app', '_blank')}>
+          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Merch" onClick={() => setShowMerch(true)}>
             <ShoppingCart size={19} strokeWidth={1.5} />
           </button>
         </div>
@@ -1805,8 +1845,10 @@ const App: React.FC = () => {
         {/* Main content area */}
         <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
 
-        {showSettings ? (
-          <SettingsPage vaultPath={vaultPath} onVaultSwitch={handleVaultSwitchFromSettings} onBlogDeleted={refreshRemotePosts} />
+        {showMerch ? (
+          <MerchPage />
+        ) : showSettings ? (
+          <SettingsPage vaultPath={vaultPath} onVaultSwitch={handleVaultSwitchFromSettings} onBlogDeleted={refreshRemotePosts} onOpenMerch={() => setShowMerch(true)} />
         ) : activeFileTab ? (
           <>
             {/* Navigation bar with breadcrumb */}
