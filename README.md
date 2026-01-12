@@ -1,5 +1,7 @@
 # Xin Notes
 
+[![Tests](https://github.com/mark-mcdermott/xin/actions/workflows/test.yml/badge.svg)](https://github.com/mark-mcdermott/xin/actions/workflows/test.yml)
+
 > A lightweight desktop app for note-taking and blog publishing, inspired by Obsidian.
 
 ## What is Xin Notes?
