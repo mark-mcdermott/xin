@@ -690,6 +690,28 @@ textarea::placeholder {
   color: var(--text-placeholder) !important;
 }
 
+/* Feedback form textarea */
+textarea.feedback-textarea {
+  background-color: #faf6f0 !important;
+  border: 1px solid #d4c4a8 !important;
+}
+
+textarea.feedback-textarea::placeholder {
+  color: #888 !important;
+}
+
+/* Docs code block text selection */
+pre code::selection,
+pre code *::selection {
+  background-color: #d0d0d0 !important;
+  color: #000 !important;
+}
+
+/* Make hashtag titles consistent color in code blocks */
+pre code .token.title .token.punctuation {
+  color: #c678dd !important;
+}
+
 /* Remove focus outline, use border instead */
 input:focus, select:focus, textarea:focus {
   outline: none;

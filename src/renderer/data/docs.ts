@@ -27,8 +27,9 @@ export const docsTree: DocSection[] = [
     title: 'Daily Notes',
     children: [
       { id: 'daily-notes-intro', title: 'Introduction' },
-      { id: 'calendar', title: 'Calendar Navigation' },
-      { id: 'daily-shortcuts', title: 'Shortcuts' },
+      { id: 'file-format', title: 'File Format' },
+      { id: 'markdown-support', title: 'Markdown Support' },
+      { id: 'tips-workflows', title: 'Tips & Workflows' },
     ],
   },
   {
@@ -71,14 +72,6 @@ export const docsTree: DocSection[] = [
       { id: 'cloudflare-setup', title: 'Cloudflare Pages Setup' },
     ],
   },
-  {
-    id: 'shortcuts',
-    title: 'Keyboard Shortcuts',
-    children: [
-      { id: 'command-palette', title: 'Command Palette' },
-      { id: 'navigation-shortcuts', title: 'Navigation' },
-    ],
-  },
 ];
 
 // Documentation content
@@ -89,33 +82,33 @@ export const docPages: Record<string, DocPage> = {
     title: 'Overview',
     content: `# Welcome to Xun
 
-Xun is a lightweight desktop note-taking and journaling application for macOS. It's designed for a specific workflow: daily notes with tag-based organization and integrated blog publishing.
+Xun is a lightweight desktop note-taking, journaling, and blog publishing application. It's designed for a specific workflow: daily notes with tag-based organization and integrated blog publishing.
 
 ## Philosophy
 
 Xun is opinionated and streamlined. Rather than trying to be everything to everyone, it focuses on doing a few things well:
 
-- **Daily notes** as the primary way to capture thoughts
-- **Tags** to organize and filter content across notes
-- **One-click publishing** to your blog hosted on GitHub and Cloudflare Pages
+- [Daily notes](doc:daily-notes-intro) as the primary way to capture thoughts
+- [Tags](doc:tag-syntax) to organize and filter content across notes
+- [One-click publishing](doc:publishing) to your blog hosted on GitHub and Cloudflare Pages
 
 ## Key Features
 
 ### Mix Work and Personal Notes
 
-Use tags to seamlessly mix different types of content in your daily notes. When you leave a job or finish a project, delete all content for that tag with just a couple of clicks.
+Use tags to seamlessly mix different types of content in your daily notes. When you leave a job or finish a project, [delete all content for that tag](doc:deleting-tags) with just a couple of clicks.
 
 ### Blog from Your Notes
 
-Write blog posts directly in your daily notes using a simple format. Publish them with one click to any of your configured blogs.
+[Write blog posts](doc:writing-posts) directly in your daily notes using a simple format. Publish them with one click to any of your configured blogs.
 
 ### Multiple Blogs
 
-Xun supports multiple blogs. When you create a blog post, simply select which blog it should be published to.
+Xun supports [multiple blogs](doc:multiple-blogs). When you create a blog post, simply select which blog it should be published to.
 
 ### GitHub + Cloudflare Pages
 
-Xun is built specifically for blogs hosted on GitHub and deployed via Cloudflare Pages. This opinionated approach means less configuration and a streamlined publishing experience.`,
+Xun is built specifically for blogs hosted on [GitHub](doc:github-setup) and deployed via [Cloudflare Pages](doc:cloudflare-setup). This opinionated approach means less configuration and a streamlined publishing experience.`,
   },
 
   'quick-start': {
@@ -127,34 +120,37 @@ Get up and running with Xun in just a few minutes.
 
 ## 1. Create Your First Daily Note
 
-Click the calendar icon in the left sidebar or use the "Today" button to create today's daily note. Start writing!
+Click the "Today" button (the page icon at the top of the far left sidebar) to create today's daily note. Start writing!
 
-## 2. Add Tags to Organize Content
+## 2. Add [Tags](doc:tag-syntax) to Organize Content
 
 Add tags to your notes to organize content:
 
 \`\`\`
 #work
 
-Meeting notes from standup...
-
----
+Standup notes:
+- API refactor is almost done, PR ready for review
+- Sarah is blocked on the auth issue, waiting on DevOps
+- Sprint ends Friday, need to wrap up the dashboard tickets
 
 #personal
 
-Remember to call mom this weekend.
+Need to call mom for her birthday Sunday
+Pick up dry cleaning before 6pm
+Look into flights for thanksgiving
 \`\`\`
 
-## 3. Set Up a Blog (Optional)
+## 3. [Set Up a Blog](doc:setting-up-blog) (Optional)
 
 If you want to publish blog posts:
 
-1. Go to Settings (gear icon)
+1. Go to Settings (gear icon at the bottom of the inner-left sidebar)
 2. Click "Add Blog"
 3. Enter your GitHub repository details
 4. Optionally add Cloudflare Pages configuration
 
-## 4. Write and Publish a Blog Post
+## 4. [Write](doc:writing-posts) and [Publish](doc:publishing) a Blog Post
 
 In any daily note, create a blog post:
 
@@ -185,11 +181,11 @@ Daily notes are the heart of Xun. Each day gets its own note, automatically name
 
 ## Why Daily Notes?
 
-Daily notes provide a natural way to capture thoughts, tasks, and ideas as they happen. Instead of organizing by topic upfront, you write first and organize later with tags.
+Daily notes provide a natural way to capture thoughts, tasks, and ideas as they happen. Instead of organizing by topic upfront, you write first and organize later with [tags](doc:tag-syntax).
 
 ## Creating Daily Notes
 
-Daily notes are created automatically when you navigate to a date. The file is saved in the \`daily-notes\` folder of your vault.
+To create today's daily note, click the page icon at the top of the far-left sidebar. The file is saved in the \`daily-notes\` folder of your vault.
 
 ## Structure
 
@@ -222,64 +218,150 @@ Today I learned about...
 ===
 \`\`\`
 
-The \`---\` separators divide content into tagged sections that can be viewed and managed independently.`,
+The \`---\` separators divide content into [tagged sections](doc:tag-sections) that can be viewed and managed independently.`,
   },
 
-  calendar: {
-    id: 'calendar',
-    title: 'Calendar Navigation',
-    content: `# Calendar Navigation
+  'file-format': {
+    id: 'file-format',
+    title: 'File Format',
+    content: `# File Format
 
-The calendar in the left sidebar provides quick access to any daily note.
+Understanding how Xun stores your daily notes.
 
-## Using the Calendar
+## File Naming
 
-- **Click any date** to open that day's note (creates it if it doesn't exist)
-- **Dots** under dates indicate existing notes
-- **Today** is highlighted with a ring
-- **Selected date** has a filled background
+Daily notes are automatically named using the ISO date format:
 
-## Month Navigation
+\`\`\`
+YYYY-MM-DD.md
+\`\`\`
 
-Use the arrow buttons at the top of the calendar to move between months. The current month and year are displayed in the header.
+For example:
+- \`2024-01-15.md\`
+- \`2024-12-31.md\`
 
-## Quick Actions
+This format ensures notes sort chronologically in any file browser.
 
-Below the calendar, you'll find quick action buttons:
+## Storage Location
 
-- **Today** - Jump to today's note
-- **Yesterday** - Open yesterday's note
-- **Tomorrow** - Open tomorrow's note
+All daily notes are stored in the \`daily-notes\` folder inside your vault:
 
-These shortcuts make it easy to navigate between recent days without using the calendar.`,
+\`\`\`
+YourVault/
+  daily-notes/
+    2024-01-15.md
+    2024-01-16.md
+    2024-01-17.md
+\`\`\`
+
+## File Contents
+
+Each note is a plain Markdown file. You can open and edit these files with any text editor if needed.
+
+The first line is typically a heading with the date, followed by your tagged content sections.`,
   },
 
-  'daily-shortcuts': {
-    id: 'daily-shortcuts',
-    title: 'Daily Note Shortcuts',
-    content: `# Daily Note Shortcuts
+  'markdown-support': {
+    id: 'markdown-support',
+    title: 'Markdown Support',
+    content: `# Markdown Support
 
-Xun provides several ways to quickly access daily notes.
+Xun uses standard Markdown syntax for formatting your notes.
 
-## Sidebar Buttons
+## Basic Formatting
 
-The left sidebar includes quick access buttons:
+- **Bold** - \`**text**\` or \`__text__\`
+- *Italic* - \`*text*\` or \`_text_\`
+- ~~Strikethrough~~ - \`~~text~~\`
 
-- **Today** - Opens today's daily note
-- **Yesterday** - Opens yesterday's note
-- **Tomorrow** - Opens tomorrow's note
+## Headings
 
-## Command Palette
+\`\`\`markdown
+# Heading 1
+## Heading 2
+### Heading 3
+\`\`\`
 
-Press **Cmd+K** (or **Ctrl+K**) to open the command palette, then type:
+## Lists
 
-- "today" - Jump to today's note
-- "yesterday" - Open yesterday's note
-- "tomorrow" - Open tomorrow's note
+\`\`\`markdown
+- Unordered item
+- Another item
 
-## Calendar Icon
+1. Ordered item
+2. Another item
+\`\`\`
 
-Click the calendar icon in the far-left sidebar to show the calendar view with all navigation options.`,
+## Links
+
+\`\`\`markdown
+[Link text](https://example.com)
+\`\`\`
+
+## Code
+
+Wrap inline code with single backticks: \`code\`
+
+For code blocks, use triple backticks on their own lines before and after your code.
+
+\`\`\`javascript
+function greet(name) {
+  return "Hello, " + name;
+}
+\`\`\`
+
+## Blockquotes
+
+\`\`\`markdown
+> This is a quote
+\`\`\`
+
+## Horizontal Rules
+
+Use three dashes to create a divider (also used for tag sections):
+
+\`\`\`markdown
+---
+\`\`\``,
+  },
+
+  'tips-workflows': {
+    id: 'tips-workflows',
+    title: 'Tips & Workflows',
+    content: `# Tips & Workflows
+
+Get the most out of your daily notes with these tips.
+
+## Morning Routine
+
+Start each day by opening today's note and capturing:
+- Top priorities for the day
+- Any meetings or appointments
+- Thoughts from the morning
+
+## Capture Everything
+
+Don't overthink organization. Just write under the appropriate tag and let the tag system handle organization for you.
+
+## Use Consistent Tags
+
+Stick to a small set of tags you use regularly:
+- \`#work\` - Professional tasks and notes
+- \`#personal\` - Personal life items
+- \`#ideas\` - Random thoughts to revisit
+- \`#project-name\` - Specific project notes
+
+## End of Day Review
+
+Before closing Xun, scan through what you wrote. This helps reinforce memory and catch any loose ends.
+
+## Weekly Review
+
+Use the [tag browser](doc:viewing-tags) to review what you accomplished each week. This is great for standups, status updates, or personal reflection.
+
+## Blog as You Go
+
+If you have a [blog set up](doc:setting-up-blog), wrap interesting content in [\`===\` blocks](doc:writing-posts) as you write. Publishing becomes effortless since the content is already written.`,
   },
 
   // Tags
@@ -334,7 +416,7 @@ Content in Xun is organized into sections using tags and separators.
 
 ## Section Format
 
-A section starts with a tag line and ends at the next separator (\`---\`) or end of file:
+A section starts with a tag line and ends at the next separator (\`---\`), at another tag (\`#next-tag\`), or end of file:
 
 \`\`\`markdown
 #work
@@ -388,11 +470,7 @@ Click any tag to view all content sections tagged with it. The tag view shows:
 
 ## Editing in Tag View
 
-You can edit content directly in the tag view. Changes are saved back to the original files.
-
-## Navigation
-
-Use the back and forward arrows to navigate between tag views, just like in a web browser.`,
+You can edit content directly in the tag view. Changes are saved back to the original files.`,
   },
 
   'deleting-tags': {
@@ -408,7 +486,7 @@ Imagine you mix work notes into your daily notes alongside personal content. Whe
 
 With Xun, you can:
 
-1. Open the tag view for \`#work\`
+1. Open the [tag view](doc:viewing-tags) for \`#work\`
 2. Click the delete button
 3. Confirm the deletion
 4. All work content is removed from all files
@@ -448,20 +526,20 @@ Xun includes a built-in CMS for publishing blog posts to your GitHub-hosted blog
 
 Xun is opinionated about blog infrastructure:
 
-- **GitHub** for content storage
-- **Cloudflare Pages** for hosting and deployment
+- [GitHub](doc:github-setup) for content storage
+- [Cloudflare Pages](doc:cloudflare-setup) for hosting and deployment
 
 This focused approach means less configuration and a streamlined experience.
 
 ## How It Works
 
-1. Write blog posts in your daily notes using a special format
+1. [Write blog posts](doc:writing-posts) in your daily notes using a special format
 2. Click publish to send the post to GitHub
 3. Cloudflare Pages automatically deploys your updated site
 
 ## Multiple Blogs
 
-Xun supports multiple blogs. Configure each one in Settings, and when you publish a post, select which blog it should go to.
+Xun supports [multiple blogs](doc:multiple-blogs). [Configure each one](doc:setting-up-blog) in Settings, and when you publish a post, select which blog it should go to.
 
 ## Why This Approach?
 
@@ -482,15 +560,20 @@ Before you can publish, you need to configure at least one blog in Xun.
 
 You'll need:
 
-1. A GitHub repository for your blog
-2. A GitHub Personal Access Token with repo permissions
-3. (Optional) A Cloudflare Pages project connected to your repository
+1. A public GitHub repository (or if you're using Cloudflare Pages, the GitHub repo can be public or private)
+2. A [GitHub Personal Access Token](doc:github-setup) with repo permissions
+3. (Optional) A [Cloudflare Pages project](doc:cloudflare-setup) connected to your repository
 
 ## Adding a Blog
 
 1. Open Settings (gear icon in the left sidebar)
 2. Scroll to the Blogs section
 3. Click "Add Blog"
+4. All existing blog posts are fetched and will now show in the inner-left sidebar above the file tree
+
+## Compatibility
+
+Xun works with any static site generator that uses markdown files with YAML frontmatter, including Astro, Jekyll, Hugo, Gatsby, Eleventy, and Next.js.
 
 ## Configuration Fields
 
@@ -522,13 +605,41 @@ If configured, Xun will show deployment progress after publishing.`,
     title: 'Writing Blog Posts',
     content: `# Writing Blog Posts
 
-Blog posts in Xun are written using a special block format within your notes.
+Blog posts in Xun can be written using two different formats within your notes.
 
-## Blog Block Format
+## Method 1: @blogname post
 
-Wrap your blog post in \`===\` markers with YAML frontmatter:
+Type \`@\` and select your blog name from the autocomplete, then add \`post\`:
 
-\`\`\`markdown
+\`\`\`
+@myblog post
+@title My Post Title
+@subtitle An optional subtitle
+@date 2024-01-15
+@tags tag1, tag2
+
+Your post content goes here.
+
+You can use **Markdown** formatting.
+
+---
+\`\`\`
+
+The block ends at \`---\`, a \`#tag\`, or end of file.
+
+### @ Fields
+
+- \`@title\` (required): The post title
+- \`@subtitle\` (optional): A subtitle or description
+- \`@date\` (optional): Publication date in YYYY-MM-DD format (defaults to today)
+- \`@tags\` (optional): Comma-separated tags
+- \`@slug\` (optional): Custom URL slug
+
+## Method 2: === Block (With Frontmatter)
+
+For more control, wrap your blog post in \`===\` markers with YAML frontmatter:
+
+\`\`\`
 ===
 ---
 title: "Your Post Title"
@@ -549,7 +660,7 @@ You can use **Markdown** formatting, including:
 ===
 \`\`\`
 
-## Frontmatter Fields
+## Frontmatter Fields (=== method only)
 
 - **title** (required): The post title
 - **subtitle** (optional): A subtitle or description
@@ -558,10 +669,10 @@ You can use **Markdown** formatting, including:
 
 ## Writing Tips
 
-- Write your posts directly in daily notes
-- The blog block can appear anywhere in your note
-- Mix blog content with other tagged sections
-- Preview your markdown formatting before publishing`,
+- Write your posts directly in [daily notes](doc:daily-notes-intro)
+- Blog blocks can appear anywhere in your note
+- Mix blog content with other [tagged sections](doc:tag-sections)
+- Preview your [markdown formatting](doc:markdown-support) before publishing`,
   },
 
   publishing: {
@@ -573,8 +684,8 @@ Once you've written a blog post, publishing is just one click away.
 
 ## Publishing a Post
 
-1. Write your blog post using the \`===\` block format
-2. Click the publish icon that appears next to the block
+1. [Write your blog post](doc:writing-posts) using the \`===\` block format
+2. Click the publish icon (a rocket) that appears next to the block
 3. Select which blog to publish to (if you have multiple)
 4. Watch the progress as your post is published
 
@@ -582,7 +693,7 @@ Once you've written a blog post, publishing is just one click away.
 
 1. **Content Preparation**: Your post is formatted with proper frontmatter
 2. **GitHub Push**: The post is committed to your repository
-3. **Deployment** (if configured): Cloudflare Pages builds and deploys your site
+3. **Deployment** (if configured): [Cloudflare Pages](doc:cloudflare-setup) builds and deploys your site
 
 ## Progress Tracking
 
@@ -590,17 +701,16 @@ During publishing, you'll see:
 
 - A progress bar
 - Status for each step
-- The final URL of your published post
 
 ## Updating Posts
 
-To update a published post:
+Updating a live post is easy:
 
 1. Edit the blog block in your notes
 2. Publish again
 3. The existing file will be updated (not duplicated)
 
-The slug (URL path) is generated from the post date and title. If you change the title, a new file will be created.`,
+The slug (URL path) is generated from the post date and title. If you change the title, a new file will be created and the original will be deleted.`,
   },
 
   'multiple-blogs': {
@@ -612,7 +722,7 @@ Xun supports publishing to multiple blogs from the same vault.
 
 ## Adding Multiple Blogs
 
-In Settings, you can add as many blogs as you need. Each blog has its own:
+In [Settings](doc:setting-up-blog), you can add as many blogs as you need. Each blog has its own:
 
 - GitHub repository
 - Content path configuration
@@ -645,11 +755,11 @@ Xun can display and manage posts that are already published to your blogs.
 
 ## Viewing Remote Posts
 
-In the file tree, you'll see a section for each configured blog showing its published posts. These are fetched from GitHub and cached locally.
+In the file tree, you'll see a section for each [configured blog](doc:setting-up-blog) showing its published posts. These are fetched from GitHub and cached locally.
 
 ## Refresh
 
-Posts are automatically refreshed periodically. You can also manually refresh to see the latest content from GitHub.
+Posts are automatically refreshed periodically.
 
 ## Organization
 
@@ -665,7 +775,7 @@ You can edit published posts directly in Xun without leaving the app.
 
 ## Opening a Published Post
 
-Click any post in the remote posts section of the file tree. The content will be loaded from GitHub and displayed in the editor.
+Click any post in the [remote posts](doc:remote-posts) section of the file tree. The content will be loaded from GitHub and displayed in the editor.
 
 ## Making Changes
 
@@ -737,7 +847,7 @@ Click on any vault in the list to switch to it. The app will reload with the new
 
 Each vault contains:
 
-- \`daily-notes/\` - Your daily notes
+- \`daily-notes/\` - Your [daily notes](doc:daily-notes-intro)
 - \`notes/\` - Other markdown files
 - Configuration is stored separately (not in the vault)`,
   },
@@ -811,7 +921,7 @@ Xun publishes to GitHub repositories. Here's how to set up the connection.
 Your blog repository should:
 
 - Have a content folder for posts
-- Be connected to Cloudflare Pages (optional but recommended)
+- Be connected to [Cloudflare Pages](doc:cloudflare-setup) (optional but recommended)
 - Have your static site generator configured`,
   },
 
@@ -857,75 +967,6 @@ With Cloudflare configured, after publishing you'll see:
 - Deployment status in real-time
 - Build progress
 - The final live URL of your post`,
-  },
-
-  // Keyboard Shortcuts
-  'command-palette': {
-    id: 'command-palette',
-    title: 'Command Palette',
-    content: `# Command Palette
-
-The command palette provides quick access to files, tags, and actions.
-
-## Opening the Palette
-
-Press **Cmd+K** (macOS) or **Ctrl+K** (Windows/Linux) to open the command palette.
-
-## Searching
-
-Start typing to filter results. The palette searches:
-
-- **Files**: All markdown files in your vault
-- **Tags**: All tags with section counts
-- **Actions**: New file, new folder, daily note shortcuts
-
-## Navigation
-
-- **Arrow keys**: Move selection up/down
-- **Enter**: Open selected item
-- **Escape**: Close the palette
-
-## Categories
-
-Results are grouped by category:
-
-- **Daily**: Today, Yesterday, Tomorrow shortcuts
-- **Files**: Your markdown files
-- **Tags**: Available tags
-- **Actions**: Create new items`,
-  },
-
-  'navigation-shortcuts': {
-    id: 'navigation-shortcuts',
-    title: 'Navigation Shortcuts',
-    content: `# Navigation Shortcuts
-
-Xun provides keyboard shortcuts for common navigation tasks.
-
-## Global Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| Cmd+K | Open command palette |
-| Cmd+S | Save current file |
-| Cmd+W | Close current tab |
-
-## Editor Shortcuts
-
-Standard text editing shortcuts work in the editor:
-
-| Shortcut | Action |
-|----------|--------|
-| Cmd+B | Bold |
-| Cmd+I | Italic |
-| Cmd+Z | Undo |
-| Cmd+Shift+Z | Redo |
-
-## Navigation
-
-- Click the **back arrow** to go to the previous view
-- Click the **forward arrow** to go forward in history
-- Use the **sidebar** to navigate between files and tags`,
   },
 };
 

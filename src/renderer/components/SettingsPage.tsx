@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Plus, Trash2, Edit2, Github, Cloud, Power, Coffee } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Edit2, Github, Cloud, Power, Coffee, Bug } from 'lucide-react';
 import { Button } from './Button';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -715,42 +715,128 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch, onBlo
 
         {/* Support Section */}
         <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid var(--border-primary)' }}>
-          <div className="flex items-center gap-3" style={{ marginBottom: '16px' }}>
-            <Coffee size={20} strokeWidth={1.5} style={{ color: 'var(--text-muted)', marginRight: '8px' }} />
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
-              Xun is free, but you can support by purchasing some Xun{' '}
-              <span
-                onClick={onOpenMerch}
-                style={{ color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                merch
-              </span>
-              {' '}or buying me a coffee if you're enjoying it.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span style={{ fontSize: '14px', color: 'var(--text-muted)', marginRight: '4px' }}>$</span>
-            <input
-              type="number"
-              min="1"
-              step="1"
-              defaultValue="5"
-              className="hide-number-spinners"
-              style={{
-                width: '48px',
-                padding: '8px 0',
-                fontSize: '14px',
-                border: '1px solid var(--input-border)',
-                backgroundColor: 'var(--bg-primary)',
-                color: 'var(--text-primary)',
-                borderRadius: '6px',
-                textAlign: 'center',
-                marginRight: '8px'
-              }}
-            />
-            <Button variant="secondary" onClick={() => { /* TODO: Hook up to Stripe */ }}>
-              Tip
-            </Button>
+          <div className="flex" style={{ gap: '32px' }}>
+            {/* Left column - Xun is free */}
+            <div style={{ flex: 1 }}>
+              <div className="flex items-center gap-3" style={{ marginBottom: '16px' }}>
+                <Coffee size={20} strokeWidth={1.5} style={{ color: 'var(--text-muted)', marginRight: '8px', flexShrink: 0, minWidth: '20px', minHeight: '20px' }} />
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
+                  Xun is free, but you can support by purchasing some Xun{' '}
+                  <span
+                    onClick={onOpenMerch}
+                    style={{ color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    merch
+                  </span>
+                  {' '}or buying me a coffee if you're enjoying it.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span style={{ fontSize: '14px', color: 'var(--text-muted)', marginRight: '4px' }}>$</span>
+                <input
+                  id="tip-amount"
+                  type="number"
+                  min="1"
+                  step="1"
+                  defaultValue="5"
+                  style={{
+                    width: '48px',
+                    padding: '8px 0',
+                    fontSize: '14px',
+                    border: '1px solid var(--input-border)',
+                    backgroundColor: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    borderRadius: '6px',
+                    textAlign: 'center',
+                    marginRight: '8px'
+                  }}
+                />
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const input = document.getElementById('tip-amount') as HTMLInputElement;
+                    const amount = Math.max(1, parseInt(input?.value || '5', 10));
+                    // Ko-fi donate URL with hidefeed to go straight to donation
+                    window.open(`https://ko-fi.com/markmcdermott/donate?amount=${amount}&hidefeed=true`, '_blank');
+                  }}
+                >
+                  Tip
+                </Button>
+              </div>
+            </div>
+
+            {/* Vertical divider */}
+            <div style={{ width: '1px', backgroundColor: 'var(--border-primary)' }} />
+
+            {/* Right column - Bug reports */}
+            <div style={{ flex: 1 }}>
+              <div className="flex items-center gap-3" style={{ marginBottom: '12px' }}>
+                <Bug size={20} strokeWidth={1.5} style={{ color: 'var(--text-muted)', marginRight: '8px', flexShrink: 0, minWidth: '20px', minHeight: '20px' }} />
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
+                  Found a bug or have a suggestion?{' '}
+                  <a
+                    href="https://github.com/mark-mcdermott/xun/issues"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--accent-primary)', textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    Open a GitHub issue
+                  </a>
+                  {' '}or fill out the form below.
+                </p>
+              </div>
+              <div style={{ marginTop: '16px', padding: '16px', border: '1px solid var(--border-primary)', borderRadius: '8px' }}>
+                <textarea
+                  id="feedback-message"
+                  className="feedback-textarea"
+                  placeholder="Describe the bug or suggestion..."
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    minHeight: '80px',
+                    padding: '10px 14px',
+                    fontSize: '14px',
+                    borderRadius: '6px',
+                    resize: 'vertical',
+                    marginBottom: '12px'
+                  }}
+                />
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    const textarea = document.getElementById('feedback-message') as HTMLTextAreaElement;
+                    const message = textarea?.value || '';
+                    if (!message.trim()) {
+                      alert('Please enter a message');
+                      return;
+                    }
+                    try {
+                      const response = await fetch('https://formsubmit.co/ajax/mark@markmcdermott.io', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                          subject: 'Xun Feedback',
+                          message: message
+                        })
+                      });
+                      if (response.ok) {
+                        alert('Thanks for your feedback!');
+                        textarea.value = '';
+                      } else {
+                        throw new Error('Failed to send');
+                      }
+                    } catch (error) {
+                      alert('Failed to send feedback. Please try again or open a GitHub issue.');
+                    }
+                  }}
+                >
+                  Send Feedback
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
