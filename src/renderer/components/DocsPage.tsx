@@ -1,6 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ArrowLeft, ArrowRight, BookOpen } from 'lucide-react';
 import { docPages } from '../data/docs';
+import Prism from 'prismjs';
+import 'prismjs/themes/prism-tomorrow.css';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-markdown';
+import 'prismjs/components/prism-bash';
+import 'prismjs/components/prism-json';
 
 interface DocsPageProps {
   docId: string;
@@ -8,6 +15,7 @@ interface DocsPageProps {
   canGoForward: boolean;
   goBack: () => void;
   goForward: () => void;
+  onDocClick: (docId: string) => void;
 }
 
 export const DocsPage: React.FC<DocsPageProps> = ({
@@ -16,6 +24,7 @@ export const DocsPage: React.FC<DocsPageProps> = ({
   canGoForward,
   goBack,
   goForward,
+  onDocClick,
 }) => {
   const doc = docPages[docId];
 
@@ -65,6 +74,7 @@ export const DocsPage: React.FC<DocsPageProps> = ({
     const elements: React.ReactNode[] = [];
     let inCodeBlock = false;
     let codeContent: string[] = [];
+    let codeLanguage = '';
     let inTable = false;
     let tableRows: string[][] = [];
     let listItems: string[] = [];
@@ -116,23 +126,65 @@ export const DocsPage: React.FC<DocsPageProps> = ({
     };
 
     const renderInlineMarkdown = (text: string): React.ReactNode => {
-      // Handle inline code
-      const parts = text.split(/(`[^`]+`)/g);
-      return parts.map((part, i) => {
-        if (part.startsWith('`') && part.endsWith('`')) {
+      // Handle links first: [text](url)
+      const linkPattern = /(\[[^\]]+\]\([^)]+\))/g;
+      const linkParts = text.split(linkPattern);
+
+      return linkParts.map((part, i) => {
+        // Check if this part is a link
+        const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        if (linkMatch) {
+          const [, linkText, url] = linkMatch;
+          // Internal doc link: doc:doc-id
+          if (url.startsWith('doc:')) {
+            const targetDocId = url.slice(4);
+            return (
+              <a
+                key={i}
+                href="#"
+                onClick={(e) => { e.preventDefault(); onDocClick(targetDocId); }}
+                style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}
+                onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+                onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
+              >
+                {linkText}
+              </a>
+            );
+          }
+          // External link
           return (
-            <code key={i} style={{ backgroundColor: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '4px', fontSize: '13px', fontFamily: 'monospace' }}>
-              {part.slice(1, -1)}
-            </code>
+            <a
+              key={i}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}
+              onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+              onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
+            >
+              {linkText}
+            </a>
           );
         }
-        // Handle bold
-        const boldParts = part.split(/(\*\*[^*]+\*\*)/g);
-        return boldParts.map((bp, j) => {
-          if (bp.startsWith('**') && bp.endsWith('**')) {
-            return <strong key={`${i}-${j}`}>{bp.slice(2, -2)}</strong>;
+
+        // Handle inline code
+        const codeParts = part.split(/(`[^`]+`)/g);
+        return codeParts.map((codePart, j) => {
+          if (codePart.startsWith('`') && codePart.endsWith('`')) {
+            return (
+              <code key={`${i}-${j}`} style={{ backgroundColor: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '4px', fontSize: '13px', fontFamily: 'monospace' }}>
+                {codePart.slice(1, -1)}
+              </code>
+            );
           }
-          return bp;
+          // Handle bold
+          const boldParts = codePart.split(/(\*\*[^*]+\*\*)/g);
+          return boldParts.map((bp, k) => {
+            if (bp.startsWith('**') && bp.endsWith('**')) {
+              return <strong key={`${i}-${j}-${k}`}>{bp.slice(2, -2)}</strong>;
+            }
+            return bp;
+          });
         });
       });
     };
@@ -143,18 +195,35 @@ export const DocsPage: React.FC<DocsPageProps> = ({
       // Code blocks
       if (line.startsWith('```')) {
         if (inCodeBlock) {
+          const code = codeContent.join('\n');
+          const lang = codeLanguage || 'text';
+          const grammar = Prism.languages[lang];
+          // Apply Prism highlighting if grammar exists, otherwise apply custom coloring for hashtags, === and ---
+          let highlighted: string;
+          if (grammar) {
+            highlighted = Prism.highlight(code, grammar, lang);
+          } else {
+            highlighted = code
+              .replace(/(^|\n)(===)/g, '$1<span style="color: #c678dd;">$2</span>')
+              .replace(/(^|\n)(---)/g, '$1<span style="color: #c678dd;">$2</span>')
+              .replace(/(^|\n)(#[\w-]+)/g, '$1<span style="color: #c678dd;">$2</span>');
+          }
           elements.push(
-            <pre key={`code-${elements.length}`} style={{ backgroundColor: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', marginBottom: '16px', overflow: 'auto' }}>
-              <code style={{ fontSize: '13px', fontFamily: 'monospace', color: 'var(--text-primary)', lineHeight: '1.4' }}>
-                {codeContent.join('\n')}
-              </code>
+            <pre key={`code-${elements.length}`} className={`language-${lang}`} style={{ backgroundColor: '#2d2d2d', padding: '16px', borderRadius: '8px', marginBottom: '16px', overflow: 'auto' }}>
+              <code
+                className={`language-${lang}`}
+                style={{ fontSize: '13px', fontFamily: 'monospace', lineHeight: '1.4' }}
+                dangerouslySetInnerHTML={{ __html: highlighted }}
+              />
             </pre>
           );
           codeContent = [];
+          codeLanguage = '';
           inCodeBlock = false;
         } else {
           flushList();
           flushTable();
+          codeLanguage = line.slice(3).trim();
           inCodeBlock = true;
         }
         continue;

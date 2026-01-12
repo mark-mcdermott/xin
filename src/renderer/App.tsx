@@ -84,6 +84,9 @@ const App: React.FC = () => {
   const [docsHistory, setDocsHistory] = useState<Array<{ docId: string }>>([{ docId: 'overview' }]);
   const [docsHistoryIndex, setDocsHistoryIndex] = useState(0);
 
+  // Active panel state - tracks which panel is currently displayed
+  const [activePanel, setActivePanel] = useState<'file' | 'settings' | 'docs' | 'merch'>('file');
+
   const canGoBackDocs = docsHistoryIndex > 0;
   const canGoForwardDocs = docsHistoryIndex < docsHistory.length - 1;
 
@@ -237,24 +240,24 @@ const App: React.FC = () => {
         const existingIndex = openTabs.findIndex(tab => tab.type === 'file' && tab.path === entry.path);
         if (existingIndex >= 0) {
           setActiveTabIndex(existingIndex);
-          setShowSettings(false);
+          setActivePanel('file');
         } else {
           // Need to load the file
           const content = await readFile(entry.path);
           setOpenTabs(prev => [...prev, { type: 'file', path: entry.path, content }]);
           setActiveTabIndex(openTabs.length);
-          setShowSettings(false);
+          setActivePanel('file');
         }
       } else if (entry.type === 'tag') {
         // Check if tag is already open in tabs
         const existingIndex = openTabs.findIndex(tab => tab.type === 'tag' && tab.tag === entry.tag);
         if (existingIndex >= 0) {
           setActiveTabIndex(existingIndex);
-          setShowSettings(false);
+          setActivePanel('file');
         } else {
           setOpenTabs(prev => [...prev, { type: 'tag', tag: entry.tag }]);
           setActiveTabIndex(openTabs.length);
-          setShowSettings(false);
+          setActivePanel('file');
         }
       } else if (entry.type === 'settings') {
         setShowSettings(true);
@@ -670,7 +673,7 @@ const App: React.FC = () => {
         setOpenTabs(prev => [...prev, { type: 'file', path, content }]);
         setActiveTabIndex(openTabs.length);
       }
-      setShowSettings(false);
+      setActivePanel('file');
       pushToHistory({ type: 'file', path });
     } catch (err: any) {
       console.error('Failed to read file:', err);
@@ -699,7 +702,7 @@ const App: React.FC = () => {
         }]);
         setActiveTabIndex(openTabs.length);
       }
-      setShowSettings(false);
+      setActivePanel('file');
     } catch (err: any) {
       console.error('Failed to read remote file:', err);
       alert(`Failed to read remote file: ${err.message}`);
@@ -764,11 +767,7 @@ const App: React.FC = () => {
   const handleTabClick = (index: number) => {
     const tab = openTabs[index];
     setActiveTabIndex(index);
-    setShowSettings(false);
-    setShowMerch(false);
-    setShowDocs(false);
-    setStoreView('product');
-    setCurrentProductSlug('xin-mech-hoodie');
+    setActivePanel('file');
     if (tab) {
       if (tab.type === 'file') {
         pushToHistory({ type: 'file', path: tab.path });
@@ -804,7 +803,7 @@ const App: React.FC = () => {
       setOpenTabs(prev => [...prev, { type: 'tag', tag }]);
       setActiveTabIndex(openTabs.length);
     }
-    setShowSettings(false);
+    setActivePanel('file');
     pushToHistory({ type: 'tag', tag });
   };
 
@@ -817,7 +816,7 @@ const App: React.FC = () => {
       setOpenTabs(prev => [...prev, { type: 'tag', tag }]);
       setActiveTabIndex(openTabs.length);
     }
-    setShowSettings(false);
+    setActivePanel('file');
     setSidebarTab('tags');
     pushToHistory({ type: 'tag', tag });
   };
@@ -833,7 +832,7 @@ const App: React.FC = () => {
         setOpenTabs(prev => [...prev, { type: 'file', path, content }]);
         setActiveTabIndex(openTabs.length);
       }
-      setShowSettings(false);
+      setActivePanel('file');
       pushToHistory({ type: 'file', path });
 
       // Refresh file tree and daily note dates in case a new one was created
@@ -856,7 +855,7 @@ const App: React.FC = () => {
         setOpenTabs(prev => [...prev, { type: 'file', path, content }]);
         setActiveTabIndex(openTabs.length);
       }
-      setShowSettings(false);
+      setActivePanel('file');
       pushToHistory({ type: 'file', path });
 
       // Refresh file tree and daily note dates in case a new one was created
@@ -1003,7 +1002,7 @@ const App: React.FC = () => {
       await createFile(path, initialContent);
       setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
       setActiveTabIndex(openTabs.length);
-      setShowSettings(false);
+      setActivePanel('file');
     } catch (err: any) {
       console.error('Failed to create file:', err);
     }
@@ -1031,7 +1030,7 @@ const App: React.FC = () => {
         // Open the new file in a tab
         setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
         setActiveTabIndex(openTabs.length);
-        setShowSettings(false);
+        setActivePanel('file');
       } else {
         const path = name;
         await createFolder(path);
@@ -1161,7 +1160,7 @@ const App: React.FC = () => {
         await createFile(path, initialContent);
         setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
         setActiveTabIndex(openTabs.length);
-        setShowSettings(false);
+        setActivePanel('file');
       } catch (err: any) {
         console.error('Failed to create file:', err);
       }
@@ -1188,7 +1187,7 @@ const App: React.FC = () => {
         // Open the new file in a tab
         setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
         setActiveTabIndex(openTabs.length);
-        setShowSettings(false);
+        setActivePanel('file');
       } else {
         const path = `${folderPath}/${name}`;
         await createFolder(path);
@@ -1251,7 +1250,7 @@ const App: React.FC = () => {
       await createFile(path, initialContent);
       setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
       setActiveTabIndex(openTabs.length);
-      setShowSettings(false);
+      setActivePanel('file');
     } catch (err: any) {
       // If file already exists on disk, try next number
       if (err.message?.includes('exists')) {
@@ -1262,7 +1261,7 @@ const App: React.FC = () => {
         await createFile(newPath, newContent);
         setOpenTabs(prev => [...prev, { type: 'file', path: newPath, content: newContent }]);
         setActiveTabIndex(openTabs.length);
-        setShowSettings(false);
+        setActivePanel('file');
       } else {
         console.error('Failed to create file:', err);
       }
@@ -1279,7 +1278,7 @@ const App: React.FC = () => {
       // Open the new file in a tab
       setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
       setActiveTabIndex(openTabs.length);
-      setShowSettings(false);
+      setActivePanel('file');
     } else {
       // Create folder in notes folder by default
       const path = `notes/${name}`;
@@ -1518,7 +1517,7 @@ const App: React.FC = () => {
             <div className="flex items-end h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
               {/* All Tabs (file, tag, and remote-file) */}
               {openTabs.map((tab, index) => {
-                const isActive = index === activeTabIndex && !showSettings && !showMerch && !showDocs;
+                const isActive = index === activeTabIndex && activePanel === 'file';
                 const tabKey = tab.type === 'file' ? tab.path : tab.type === 'remote-file' ? `remote-${tab.blogId}-${tab.path}` : `tag-${tab.tag}`;
                 const tabLabel = tab.type === 'file' ? getFileName(tab.path) : tab.type === 'remote-file' ? getFileName(tab.path) : tab.tag;
                 return (
@@ -1557,9 +1556,9 @@ const App: React.FC = () => {
                 <div
                   className="flex items-center justify-between cursor-pointer"
                   style={{
-                    backgroundColor: (showMerch || showDocs) ? 'var(--tab-inactive-bg)' : 'var(--tab-active-bg)',
+                    backgroundColor: activePanel !== 'settings' ? 'var(--tab-inactive-bg)' : 'var(--tab-active-bg)',
                     border: '1px solid var(--border-primary)',
-                    borderBottom: (showMerch || showDocs) ? 'none' : '1px solid var(--tab-active-bg)',
+                    borderBottom: activePanel !== 'settings' ? 'none' : '1px solid var(--tab-active-bg)',
                     marginLeft: openTabs.length === 0 ? (sidebarCollapsed ? '15px' : '12px') : '6px',
                     height: 'calc(100% - 8px)',
                     width: '180px',
@@ -1567,30 +1566,22 @@ const App: React.FC = () => {
                     paddingRight: '6px',
                     borderTopLeftRadius: '8px',
                     borderTopRightRadius: '8px',
-                    marginBottom: (showMerch || showDocs) ? '0' : '-1px'
+                    marginBottom: activePanel !== 'settings' ? '0' : '-1px'
                   }}
-                  onClick={() => {
-                    setShowMerch(false);
-                    setShowDocs(false);
-                    setStoreView('product');
-                    setCurrentProductSlug('xin-mech-hoodie');
-                  }}
+                  onClick={() => setActivePanel('settings')}
                 >
-                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: (showMerch || showDocs) ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)' }}>
+                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: activePanel !== 'settings' ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)' }}>
                     <Settings size={14} strokeWidth={1.5} style={{ marginRight: '5px' }} />
                     Settings
                   </span>
                   <button
                     className="p-0.5 rounded transition-all flex items-center justify-center hover:bg-[var(--tab-close-hover)] hover:opacity-60"
-                    style={{ color: (showMerch || showDocs) ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)', backgroundColor: 'transparent' }}
+                    style={{ color: activePanel !== 'settings' ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)', backgroundColor: 'transparent' }}
                     title="Close settings"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowSettings(false);
-                      setShowMerch(false);
-                      setShowDocs(false);
-                      setStoreView('product');
-                      setCurrentProductSlug('xin-mech-hoodie');
+                      if (activePanel === 'settings') setActivePanel('file');
                     }}
                   >
                     <X size={16} strokeWidth={2} />
@@ -1602,9 +1593,9 @@ const App: React.FC = () => {
                 <div
                   className="flex items-center justify-between cursor-pointer"
                   style={{
-                    backgroundColor: 'var(--tab-active-bg)',
+                    backgroundColor: activePanel !== 'docs' ? 'var(--tab-inactive-bg)' : 'var(--tab-active-bg)',
                     border: '1px solid var(--border-primary)',
-                    borderBottom: '1px solid var(--tab-active-bg)',
+                    borderBottom: activePanel !== 'docs' ? 'none' : '1px solid var(--tab-active-bg)',
                     marginLeft: showSettings ? '6px' : (openTabs.length === 0 ? (sidebarCollapsed ? '15px' : '12px') : '6px'),
                     height: 'calc(100% - 8px)',
                     width: '180px',
@@ -1612,20 +1603,22 @@ const App: React.FC = () => {
                     paddingRight: '6px',
                     borderTopLeftRadius: '8px',
                     borderTopRightRadius: '8px',
-                    marginBottom: '-1px'
+                    marginBottom: activePanel !== 'docs' ? '0' : '-1px'
                   }}
+                  onClick={() => setActivePanel('docs')}
                 >
-                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: 'var(--tab-active-text)' }}>
+                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: activePanel !== 'docs' ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)' }}>
                     <BookOpen size={14} strokeWidth={1.5} style={{ marginRight: '5px' }} />
                     Docs
                   </span>
                   <button
                     className="p-0.5 rounded transition-all flex items-center justify-center hover:bg-[var(--tab-close-hover)] hover:opacity-60"
-                    style={{ color: 'var(--tab-active-text)', backgroundColor: 'transparent' }}
+                    style={{ color: activePanel !== 'docs' ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)', backgroundColor: 'transparent' }}
                     title="Close docs"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowDocs(false);
+                      if (activePanel === 'docs') setActivePanel('file');
                     }}
                   >
                     <X size={16} strokeWidth={2} />
@@ -1637,9 +1630,9 @@ const App: React.FC = () => {
                 <div
                   className="flex items-center justify-between cursor-pointer"
                   style={{
-                    backgroundColor: 'var(--tab-active-bg)',
+                    backgroundColor: activePanel !== 'merch' ? 'var(--tab-inactive-bg)' : 'var(--tab-active-bg)',
                     border: '1px solid var(--border-primary)',
-                    borderBottom: '1px solid var(--tab-active-bg)',
+                    borderBottom: activePanel !== 'merch' ? 'none' : '1px solid var(--tab-active-bg)',
                     marginLeft: showSettings || showDocs ? '6px' : (openTabs.length === 0 ? (sidebarCollapsed ? '15px' : '12px') : '6px'),
                     height: 'calc(100% - 8px)',
                     width: '180px',
@@ -1647,22 +1640,22 @@ const App: React.FC = () => {
                     paddingRight: '6px',
                     borderTopLeftRadius: '8px',
                     borderTopRightRadius: '8px',
-                    marginBottom: '-1px'
+                    marginBottom: activePanel !== 'merch' ? '0' : '-1px'
                   }}
+                  onClick={() => setActivePanel('merch')}
                 >
-                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: 'var(--tab-active-text)' }}>
+                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: activePanel !== 'merch' ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)' }}>
                     <ShoppingCart size={14} strokeWidth={1.5} style={{ marginRight: '5px' }} />
                     Merch
                   </span>
                   <button
                     className="p-0.5 rounded transition-all flex items-center justify-center hover:bg-[var(--tab-close-hover)] hover:opacity-60"
-                    style={{ color: 'var(--tab-active-text)', backgroundColor: 'transparent' }}
+                    style={{ color: activePanel !== 'merch' ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)', backgroundColor: 'transparent' }}
                     title="Close merch"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowMerch(false);
-                      setStoreView('product');
-                      setCurrentProductSlug('xin-mech-hoodie');
+                      if (activePanel === 'merch') setActivePanel('file');
                     }}
                   >
                     <X size={16} strokeWidth={2} />
@@ -1706,11 +1699,11 @@ const App: React.FC = () => {
             <Code size={20} strokeWidth={1.5} />
           </button>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Documentation" onClick={() => { setShowDocs(true); setShowMerch(false); setSidebarTab('docs'); }}>
+          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Documentation" onClick={() => { setShowDocs(true); setSidebarTab('docs'); setActivePanel('docs'); }}>
             <BookOpen size={20} strokeWidth={1.5} />
           </button>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all relative" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Merch" onClick={() => { setShowMerch(true); setShowDocs(false); setStoreView('index'); }}>
+          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all relative" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Merch" onClick={() => { setShowMerch(true); setStoreView('index'); setActivePanel('merch'); }}>
             <ShoppingCart size={19} strokeWidth={1.5} />
             {!showMerch && sidebarCartCount > 0 && (
               <span
@@ -1980,7 +1973,7 @@ const App: React.FC = () => {
               {/* <button className="p-1.5 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Help">
                 <HelpCircle size={16} strokeWidth={1.5} />
               </button> */}
-              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginRight: '8px', outline: 'none' }} title="Settings" onClick={() => setShowSettings(true)}>
+              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginRight: '8px', outline: 'none' }} title="Settings" onClick={() => { setShowSettings(true); setActivePanel('settings'); }}>
                 <Settings size={18} strokeWidth={1.5} />
               </button>
             </div>
@@ -1991,15 +1984,16 @@ const App: React.FC = () => {
         {/* Main content area */}
         <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
 
-        {showDocs ? (
+        {activePanel === 'docs' && showDocs ? (
           <DocsPage
             docId={currentDocId}
             canGoBack={canGoBackDocs}
             canGoForward={canGoForwardDocs}
             goBack={goBackDocs}
             goForward={goForwardDocs}
+            onDocClick={navigateDocs}
           />
-        ) : showMerch ? (
+        ) : activePanel === 'merch' && showMerch ? (
           storeView === 'product' && currentProductSlug ? (
             <ProductPage
               key={`${currentProductSlug}-${productInitialSize}-${productInitialColor}`}
@@ -2052,8 +2046,8 @@ const App: React.FC = () => {
               goForward={goForwardStore}
             />
           )
-        ) : showSettings ? (
-          <SettingsPage vaultPath={vaultPath} onVaultSwitch={handleVaultSwitchFromSettings} onBlogDeleted={refreshRemotePosts} onOpenMerch={() => { setShowMerch(true); setStoreView('index'); }} />
+        ) : activePanel === 'settings' && showSettings ? (
+          <SettingsPage vaultPath={vaultPath} onVaultSwitch={handleVaultSwitchFromSettings} onBlogDeleted={refreshRemotePosts} onOpenMerch={() => { setShowMerch(true); setStoreView('index'); setActivePanel('merch'); }} />
         ) : activeFileTab ? (
           <>
             {/* Navigation bar with breadcrumb */}
