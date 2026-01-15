@@ -4,6 +4,20 @@
 
 > A lightweight desktop app for note-taking and blog publishing, inspired by Obsidian.
 
+## Installation (macOS)
+
+```bash
+git clone https://github.com/mark-mcdermott/xin.git
+cd xin
+npm install
+npm run package
+```
+
+Then:
+1. Double-click the `.dmg` file in `/release`
+2. Drag the Xin icon to Applications in the window that appears
+3. Open Xin from your Applications folder
+
 ## What is Xin Notes?
 
 A small Electron app that looks like Obsidian and has core note-taking functionality, without all the extra stuff Obsidian has. And it has a few nice extra features.
