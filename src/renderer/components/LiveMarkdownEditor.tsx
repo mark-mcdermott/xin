@@ -15,6 +15,8 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { autocompletion, CompletionContext, Completion, startCompletion } from '@codemirror/autocomplete';
 import { spellCheckLinter, spellCheckTheme, spellCheckKeymap, spellCheckCompletionSource } from '../utils/spellcheck';
 import hljs from 'highlight.js/lib/core';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 // Import common languages
 import javascript from 'highlight.js/lib/languages/javascript';
 import typescript from 'highlight.js/lib/languages/typescript';
@@ -134,13 +136,15 @@ function getSyntaxTokens(code: string, language: string, lineOffset: number): Sy
 // ============================================================================
 
 interface MarkdownElement {
-  type: 'bold' | 'italic' | 'code' | 'strikethrough' | 'link' | 'image' | 'tag';
+  type: 'bold' | 'italic' | 'code' | 'strikethrough' | 'link' | 'image' | 'tag' | 'highlight' | 'superscript' | 'subscript' | 'footnote_ref' | 'math_inline';
   from: number;  // Start of entire element (including markers)
   to: number;    // End of entire element (including markers)
   openMarker: { from: number; to: number };
   closeMarker: { from: number; to: number };
   // For links: extra info
   linkUrl?: string;
+  // For footnotes: reference id
+  footnoteId?: string;
 }
 
 interface HeaderElement {
@@ -170,6 +174,43 @@ interface BlockquoteElement {
   to: number;
   markerFrom: number;
   markerTo: number;
+}
+
+interface TableElement {
+  type: 'table';
+  from: number;
+  to: number;
+  rows: Array<{
+    cells: string[];
+    isHeader: boolean;
+    isSeparator: boolean;
+  }>;
+}
+
+interface DefinitionListElement {
+  type: 'definition';
+  from: number;
+  to: number;
+  term: string;
+  definition: string;
+  markerFrom: number;
+  markerTo: number;
+}
+
+interface FootnoteDefElement {
+  type: 'footnote_def';
+  from: number;
+  to: number;
+  id: string;
+  markerFrom: number;
+  markerTo: number;
+}
+
+interface MathBlockElement {
+  type: 'math_block';
+  from: number;
+  to: number;
+  content: string;
 }
 
 // ============================================================================
@@ -291,6 +332,75 @@ function parseInlineElements(text: string, lineFrom: number): MarkdownElement[] 
       to: tagEnd,
       openMarker: { from: tagStart, to: tagStart },
       closeMarker: { from: tagEnd, to: tagEnd }
+    });
+  }
+
+  // Highlight: ==text==
+  const highlightRegex = /==([^=]+)==/g;
+  while ((match = highlightRegex.exec(text)) !== null) {
+    elements.push({
+      type: 'highlight',
+      from: lineFrom + match.index,
+      to: lineFrom + match.index + match[0].length,
+      openMarker: { from: lineFrom + match.index, to: lineFrom + match.index + 2 },
+      closeMarker: { from: lineFrom + match.index + match[0].length - 2, to: lineFrom + match.index + match[0].length }
+    });
+  }
+
+  // Superscript: ^text^
+  const superscriptRegex = /\^([^^]+)\^/g;
+  while ((match = superscriptRegex.exec(text)) !== null) {
+    elements.push({
+      type: 'superscript',
+      from: lineFrom + match.index,
+      to: lineFrom + match.index + match[0].length,
+      openMarker: { from: lineFrom + match.index, to: lineFrom + match.index + 1 },
+      closeMarker: { from: lineFrom + match.index + match[0].length - 1, to: lineFrom + match.index + match[0].length }
+    });
+  }
+
+  // Subscript: ~text~ (single tilde, not double like strikethrough)
+  const subscriptRegex = /(?<!~)~([^~]+)~(?!~)/g;
+  while ((match = subscriptRegex.exec(text)) !== null) {
+    const from = lineFrom + match.index;
+    const to = lineFrom + match.index + match[0].length;
+    // Make sure it doesn't overlap with strikethrough
+    const overlapsWithStrike = elements.some(el =>
+      el.type === 'strikethrough' && !(to <= el.from || from >= el.to)
+    );
+    if (!overlapsWithStrike) {
+      elements.push({
+        type: 'subscript',
+        from,
+        to,
+        openMarker: { from, to: from + 1 },
+        closeMarker: { from: to - 1, to }
+      });
+    }
+  }
+
+  // Footnote reference: [^1] or [^note]
+  const footnoteRefRegex = /\[\^([^\]]+)\]/g;
+  while ((match = footnoteRefRegex.exec(text)) !== null) {
+    elements.push({
+      type: 'footnote_ref',
+      from: lineFrom + match.index,
+      to: lineFrom + match.index + match[0].length,
+      openMarker: { from: lineFrom + match.index, to: lineFrom + match.index + 2 },
+      closeMarker: { from: lineFrom + match.index + match[0].length - 1, to: lineFrom + match.index + match[0].length },
+      footnoteId: match[1]
+    });
+  }
+
+  // Inline math: $formula$ (single $, not double)
+  const mathInlineRegex = /(?<!\$)\$(?!\$)([^$]+)\$(?!\$)/g;
+  while ((match = mathInlineRegex.exec(text)) !== null) {
+    elements.push({
+      type: 'math_inline',
+      from: lineFrom + match.index,
+      to: lineFrom + match.index + match[0].length,
+      openMarker: { from: lineFrom + match.index, to: lineFrom + match.index + 1 },
+      closeMarker: { from: lineFrom + match.index + match[0].length - 1, to: lineFrom + match.index + match[0].length }
     });
   }
 
@@ -478,6 +588,63 @@ function parseBlockquoteElement(text: string, lineFrom: number): BlockquoteEleme
     };
   }
   return null;
+}
+
+function parseFootnoteDefElement(text: string, lineFrom: number): FootnoteDefElement | null {
+  // Footnote definition: [^id]: definition text
+  const match = text.match(/^\[\^([^\]]+)\]:\s*/);
+  if (match) {
+    return {
+      type: 'footnote_def',
+      from: lineFrom,
+      to: lineFrom + text.length,
+      id: match[1],
+      markerFrom: lineFrom,
+      markerTo: lineFrom + match[0].length
+    };
+  }
+  return null;
+}
+
+function parseDefinitionListElement(text: string, lineFrom: number): DefinitionListElement | null {
+  // Definition description: starts with : followed by space
+  const match = text.match(/^:\s+(.*)$/);
+  if (match) {
+    return {
+      type: 'definition',
+      from: lineFrom,
+      to: lineFrom + text.length,
+      term: '', // Term is on the previous line
+      definition: match[1],
+      markerFrom: lineFrom,
+      markerTo: lineFrom + 2 // ": "
+    };
+  }
+  return null;
+}
+
+function parseTableRow(text: string, lineFrom: number): { cells: string[]; isSeparator: boolean } | null {
+  // Table row: | cell | cell | or separator: |---|---|
+  if (!text.trim().startsWith('|')) return null;
+
+  // Check if it's a separator row
+  const separatorMatch = text.match(/^\|[\s\-:|]+\|$/);
+  if (separatorMatch) {
+    const cells = text.split('|').filter(c => c.trim() !== '');
+    return { cells, isSeparator: true };
+  }
+
+  // Regular table row
+  const cells = text.split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1);
+  if (cells.length > 0) {
+    return { cells: cells.map(c => c.trim()), isSeparator: false };
+  }
+
+  return null;
+}
+
+function isMathBlockDelimiter(text: string): boolean {
+  return text.trim() === '$$';
 }
 
 // ============================================================================
@@ -812,6 +979,8 @@ function createDecorations(
   let inCodeBlock = false;
   let codeBlockStartLine = -1;
   let codeBlockLang = '';
+  let inMathBlock = false;
+  let mathBlockStartLine = -1;
   let inBlogBlock = false;
   let inBlogFrontmatter = false;
   let blogFrontmatterDashCount = 0;
@@ -1077,8 +1246,70 @@ function createDecorations(
       continue;
     }
 
+    // Track math block state ($$...$$)
+    if (lineText.trim() === '$$') {
+      if (!inMathBlock) {
+        // Opening $$
+        inMathBlock = true;
+        mathBlockStartLine = i;
+      } else {
+        // Closing $$ - style the math block
+        inMathBlock = false;
+        const mathBlockEndLine = i;
+
+        // Hide the opening $$ line
+        const openingLine = doc.line(mathBlockStartLine);
+        if (!(cursorPos >= openingLine.from && cursorPos <= openingLine.to)) {
+          decorations.push(
+            Decoration.replace({}).range(openingLine.from, openingLine.to)
+          );
+          decorations.push(
+            Decoration.line({ class: 'cm-hidden-line' }).range(openingLine.from)
+          );
+        }
+
+        // Hide the closing $$ line
+        decorations.push(
+          Decoration.replace({}).range(line.from, line.to)
+        );
+        decorations.push(
+          Decoration.line({ class: 'cm-hidden-line' }).range(line.from)
+        );
+
+        // Style the content lines as math block
+        for (let j = mathBlockStartLine + 1; j < mathBlockEndLine; j++) {
+          const contentLine = doc.line(j);
+          decorations.push(
+            Decoration.line({ class: 'cm-math-block' }).range(contentLine.from)
+          );
+          // Render the math using KaTeX
+          try {
+            const mathContent = contentLine.text;
+            if (mathContent.trim() && !(cursorPos >= contentLine.from && cursorPos <= contentLine.to)) {
+              const rendered = katex.renderToString(mathContent, { throwOnError: false, displayMode: true });
+              decorations.push(
+                Decoration.replace({
+                  widget: new SimpleTextWidget(rendered)
+                }).range(contentLine.from, contentLine.to)
+              );
+            }
+          } catch (e) {
+            // If KaTeX fails, just style the text
+          }
+        }
+
+        mathBlockStartLine = -1;
+      }
+      continue;
+    }
+
     // Inside code block - skip normal processing (decorations added when block closes)
     if (inCodeBlock) {
+      continue;
+    }
+
+    // Inside math block - skip normal processing (decorations added when block closes)
+    if (inMathBlock) {
       continue;
     }
 
@@ -1191,6 +1422,56 @@ function createDecorations(
       );
     }
 
+    // Parse footnote definition
+    const footnoteDef = parseFootnoteDefElement(lineText, line.from);
+    if (footnoteDef) {
+      decorations.push(
+        Decoration.mark({ class: 'cm-footnote-def-marker' }).range(footnoteDef.markerFrom, footnoteDef.markerTo)
+      );
+      decorations.push(
+        Decoration.line({ class: 'cm-footnote-def' }).range(line.from)
+      );
+    }
+
+    // Parse definition list (line starting with ": ")
+    const definitionEl = parseDefinitionListElement(lineText, line.from);
+    if (definitionEl) {
+      decorations.push(
+        Decoration.mark({ class: 'cm-definition-marker' }).range(definitionEl.markerFrom, definitionEl.markerTo)
+      );
+      decorations.push(
+        Decoration.line({ class: 'cm-definition-desc' }).range(line.from)
+      );
+    }
+
+    // Parse table row
+    const tableRow = parseTableRow(lineText, line.from);
+    if (tableRow) {
+      if (tableRow.isSeparator) {
+        decorations.push(
+          Decoration.line({ class: 'cm-table-row cm-table-separator' }).range(line.from)
+        );
+      } else {
+        // Check if this might be a header (first row before separator)
+        const nextLine = view.state.doc.lineAt(Math.min(line.to + 1, view.state.doc.length));
+        const nextLineText = view.state.doc.sliceString(nextLine.from, nextLine.to);
+        const nextIsTableSep = nextLineText.match(/^\|[\s\-:|]+\|$/);
+
+        decorations.push(
+          Decoration.line({ class: nextIsTableSep ? 'cm-table-row cm-table-header' : 'cm-table-row' }).range(line.from)
+        );
+      }
+
+      // Style the pipe characters
+      let pipeIndex = lineText.indexOf('|');
+      while (pipeIndex !== -1) {
+        decorations.push(
+          Decoration.mark({ class: 'cm-table-pipe' }).range(line.from + pipeIndex, line.from + pipeIndex + 1)
+        );
+        pipeIndex = lineText.indexOf('|', pipeIndex + 1);
+      }
+    }
+
     // Parse inline elements
     const inlineElements = parseInlineElements(lineText, line.from);
     for (const el of inlineElements) {
@@ -1231,11 +1512,34 @@ function createDecorations(
               attributes: { 'data-tag': lineText.slice(el.from - line.from, el.to - line.from) }
             }).range(el.from, el.to)
           );
+        } else if (el.type === 'highlight') {
+          decorations.push(
+            Decoration.mark({ class: 'cm-highlight' }).range(contentFrom, contentTo)
+          );
+        } else if (el.type === 'superscript') {
+          decorations.push(
+            Decoration.mark({ class: 'cm-superscript' }).range(contentFrom, contentTo)
+          );
+        } else if (el.type === 'subscript') {
+          decorations.push(
+            Decoration.mark({ class: 'cm-subscript' }).range(contentFrom, contentTo)
+          );
+        } else if (el.type === 'footnote_ref') {
+          decorations.push(
+            Decoration.mark({
+              class: 'cm-footnote-ref',
+              attributes: { 'data-footnote-id': el.footnoteId || '' }
+            }).range(el.from, el.to)
+          );
+        } else if (el.type === 'math_inline') {
+          decorations.push(
+            Decoration.mark({ class: 'cm-math-inline' }).range(contentFrom, contentTo)
+          );
         }
       }
 
       // Hide markers: always for inline code, otherwise only when cursor is outside
-      const shouldHideMarkers = el.type === 'code' || (!cursorInElement && el.type !== 'tag');
+      const shouldHideMarkers = el.type === 'code' || el.type === 'highlight' || el.type === 'superscript' || el.type === 'subscript' || el.type === 'math_inline' || (!cursorInElement && el.type !== 'tag' && el.type !== 'footnote_ref');
       if (shouldHideMarkers) {
         // Hide opening marker
         if (el.openMarker.from < el.openMarker.to) {
@@ -1429,6 +1733,98 @@ const editorTheme = EditorView.theme({
   },
   '.cm-tag-link:hover': {
     textDecorationColor: '#7c3aed'
+  },
+
+  // Highlight ==text==
+  '.cm-highlight': {
+    backgroundColor: '#fef08a',
+    padding: '0 2px',
+    borderRadius: '2px'
+  },
+
+  // Superscript ^text^
+  '.cm-superscript': {
+    verticalAlign: 'super',
+    fontSize: '0.75em',
+    lineHeight: '0'
+  },
+
+  // Subscript ~text~
+  '.cm-subscript': {
+    verticalAlign: 'sub',
+    fontSize: '0.75em',
+    lineHeight: '0'
+  },
+
+  // Footnote reference [^1]
+  '.cm-footnote-ref': {
+    color: '#7c3aed',
+    cursor: 'pointer',
+    verticalAlign: 'super',
+    fontSize: '0.75em',
+    fontWeight: '600'
+  },
+
+  // Footnote definition [^1]: text
+  '.cm-footnote-def': {
+    fontSize: '0.9em',
+    color: '#6b7280',
+    borderLeft: '2px solid #7c3aed',
+    paddingLeft: '8px',
+    marginLeft: '8px'
+  },
+  '.cm-footnote-def-marker': {
+    color: '#7c3aed',
+    fontWeight: '600'
+  },
+
+  // Math inline $formula$
+  '.cm-math-inline': {
+    fontFamily: 'KaTeX_Main, "Times New Roman", serif',
+    color: '#0369a1',
+    padding: '0 2px'
+  },
+
+  // Math block $$formula$$
+  '.cm-math-block': {
+    display: 'block',
+    textAlign: 'center',
+    padding: '12px',
+    margin: '8px 0',
+    backgroundColor: 'rgba(3, 105, 161, 0.05)',
+    borderRadius: '4px'
+  },
+
+  // Definition list
+  '.cm-definition-term': {
+    fontWeight: '600',
+    color: 'var(--text-primary)'
+  },
+  '.cm-definition-desc': {
+    paddingLeft: '24px',
+    color: '#6b7280'
+  },
+  '.cm-definition-marker': {
+    color: '#9ca3af'
+  },
+
+  // Table styles
+  '.cm-table-row': {
+    fontFamily: 'monospace',
+    fontSize: '0.9em'
+  },
+  '.cm-table-header': {
+    fontWeight: '600',
+    backgroundColor: 'rgba(0, 0, 0, 0.03)'
+  },
+  '.cm-table-separator': {
+    color: '#9ca3af'
+  },
+  '.cm-table-cell': {
+    padding: '0 8px'
+  },
+  '.cm-table-pipe': {
+    color: '#9ca3af'
   },
 
   // Header styles
