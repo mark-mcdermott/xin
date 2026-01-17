@@ -40,8 +40,10 @@ test.describe('Daily Notes', () => {
       await todayButton.click();
       await window.waitForTimeout(1000);
 
-      // Verify a tab is created with today's date format (YYYY-MM-DD)
-      const today = new Date().toISOString().split('T')[0];
+      // Verify a tab is created with today's date format (YY-MM-DD)
+      // Use local date (not UTC) to match how the app creates daily notes
+      const now = new Date();
+      const today = `${String(now.getFullYear()).slice(-2)}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const tabWithDate = window.locator(`text=${today}`);
       await expect(tabWithDate.first()).toBeVisible({ timeout: 5000 });
     }

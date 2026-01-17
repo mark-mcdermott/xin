@@ -39,8 +39,10 @@ test.describe('Tab Management', () => {
       await todayButton.click();
       await window.waitForTimeout(1000);
 
-      // A tab should be created with today's date
-      const today = new Date().toISOString().split('T')[0];
+      // A tab should be created with today's date (YY-MM-DD format)
+      // Use local date (not UTC) to match how the app creates daily notes
+      const now = new Date();
+      const today = `${String(now.getFullYear()).slice(-2)}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const tab = window.locator(`text=${today}`).first();
       await expect(tab).toBeVisible({ timeout: 5000 });
     }
@@ -103,8 +105,9 @@ test.describe('Tab Management', () => {
         await window.waitForTimeout(1000);
 
         // Now we should have two tabs
-        // Click back on the first tab (today's date)
-        const today = new Date().toISOString().split('T')[0];
+        // Click back on the first tab (today's date in YY-MM-DD format)
+        const now = new Date();
+        const today = `${String(now.getFullYear()).slice(-2)}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const todayTab = window.locator(`text=${today}`).first();
 
         if (await todayTab.isVisible()) {
@@ -144,8 +147,9 @@ test.describe('Tab Management', () => {
       await todayButton.click();
       await window.waitForTimeout(500);
 
-      // Should still have only one tab for today
-      const today = new Date().toISOString().split('T')[0];
+      // Should still have only one tab for today (YY-MM-DD format)
+      const now = new Date();
+      const today = `${String(now.getFullYear()).slice(-2)}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const todayTabs = window.locator(`text=${today}`);
       const count = await todayTabs.count();
 
@@ -181,8 +185,9 @@ test.describe('Tab Management', () => {
       await todayButton.click();
       await window.waitForTimeout(1000);
 
-      // Find the tab
-      const today = new Date().toISOString().split('T')[0];
+      // Find the tab (YY-MM-DD format)
+      const now = new Date();
+      const today = `${String(now.getFullYear()).slice(-2)}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const tab = window.locator(`text=${today}`).first();
 
       if (await tab.isVisible()) {
