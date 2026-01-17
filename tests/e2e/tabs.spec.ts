@@ -22,6 +22,17 @@ test.describe('Tab Management', () => {
   });
 
   test('should create a tab when opening daily note', async () => {
+    // Check if vault selection dialog is showing (first run)
+    const vaultDialog = window.locator('text=Welcome to Xin');
+    const isFirstRun = await vaultDialog.isVisible({ timeout: 2000 }).catch(() => false);
+
+    if (isFirstRun) {
+      // Skip test if no vault is configured - click Skip to use default vault
+      const skipButton = window.locator('text=Skip (use default)');
+      await skipButton.click();
+      await window.waitForTimeout(2000);
+    }
+
     const todayButton = window.locator('button[title="Today\'s Note"]').first();
 
     if (await todayButton.isVisible()) {
