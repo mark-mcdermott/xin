@@ -22,6 +22,17 @@ test.describe('Daily Notes', () => {
   });
 
   test('should create today\'s daily note when clicking page icon', async () => {
+    // Check if vault selection dialog is showing (first run)
+    const vaultDialog = window.locator('text=Welcome to Xun');
+    const isFirstRun = await vaultDialog.isVisible({ timeout: 2000 }).catch(() => false);
+
+    if (isFirstRun) {
+      // Skip test if no vault is configured - click Skip to use default vault
+      const skipButton = window.locator('text=Skip (use default)');
+      await skipButton.click();
+      await window.waitForTimeout(2000);
+    }
+
     // Click the "Today" button (page icon at top of far-left sidebar)
     const todayButton = window.locator('button[title="Today\'s Note"]').first();
 
