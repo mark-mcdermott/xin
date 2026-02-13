@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Plus, Trash2, Edit2, Github, Cloud, Power, Coffee, Bug, RefreshCw, Loader2 } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Edit2, Github, Cloud, Power, Coffee, Bug, RefreshCw, Loader2, Sun, Moon, Monitor } from 'lucide-react';
 import { Button } from './Button';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useToast } from './Toast';
@@ -58,10 +58,22 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch, onBlo
   const [deleteBlogConfirm, setDeleteBlogConfirm] = useState<BlogTarget | null>(null);
   const [syncingBlogId, setSyncingBlogId] = useState<string | null>(null);
 
+  // Theme state
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>('system');
+
   useEffect(() => {
     loadBlogs();
     loadVaults();
+    // Load current theme preference
+    window.electronAPI.theme.get().then(({ theme }) => {
+      setCurrentTheme(theme);
+    });
   }, []);
+
+  const handleThemeChange = async (theme: 'light' | 'dark' | 'system') => {
+    setCurrentTheme(theme);
+    await window.electronAPI.theme.set(theme);
+  };
 
   const loadBlogs = async () => {
     try {
@@ -745,6 +757,48 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch, onBlo
     <div className="flex-1 overflow-y-auto" style={{ padding: '40px 48px' }}>
       <div className="max-w-2xl">
         <h1 className="font-semibold" style={{ fontSize: '24px', color: 'var(--text-primary)', marginBottom: '32px' }}>Settings</h1>
+
+        {/* Theme Section */}
+        <div style={{ marginBottom: '32px' }}>
+          <h2 className="font-semibold" style={{ fontSize: '16px', color: 'var(--text-primary)', marginBottom: '12px' }}>Theme</h2>
+          <div className="flex items-center" style={{ gap: '32px' }}>
+            {([
+              { value: 'light' as const, label: 'Light', Icon: Sun },
+              { value: 'dark' as const, label: 'Dark', Icon: Moon },
+              { value: 'system' as const, label: 'System', Icon: Monitor },
+            ]).map(({ value, label, Icon }) => (
+              <label
+                key={value}
+                onClick={() => handleThemeChange(value)}
+                className="flex flex-col items-center"
+                style={{ cursor: 'pointer', gap: '8px' }}
+              >
+                <Icon
+                  size={24}
+                  strokeWidth={1.5}
+                  style={{
+                    color: currentTheme === value ? 'var(--accent-primary)' : 'var(--text-muted)',
+                    transition: 'color 0.15s'
+                  }}
+                />
+                <span style={{
+                  fontSize: '12px',
+                  color: currentTheme === value ? 'var(--text-primary)' : 'var(--text-muted)',
+                  transition: 'color 0.15s'
+                }}>
+                  {label}
+                </span>
+                <input
+                  type="radio"
+                  name="theme"
+                  checked={currentTheme === value}
+                  onChange={() => handleThemeChange(value)}
+                  style={{ accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
 
         {/* Vaults Section */}
         <div style={{ marginBottom: '32px' }}>

@@ -65,8 +65,8 @@
   --dialog-hover: #f0f0f2;
 
   /* Buttons */
-  --btn-primary-bg: #3f0c8d;
-  --btn-primary-bg-hover: #8017f5;
+  --btn-primary-bg: #e0246e;
+  --btn-primary-bg-hover: #fc3290;
   --btn-primary-text: #ffffff;
   --btn-secondary-bg: #ffffff;
   --btn-secondary-text: #52525b;
@@ -77,8 +77,8 @@
   --btn-danger-text: #ffffff;
 
   /* Accent/Brand colors */
-  --accent-primary: #7c3aed;
-  --accent-primary-hover: #6d28d9;
+  --accent-primary: #e0246e;
+  --accent-primary-hover: #fc3290;
   --accent-secondary: #14b8a6;
 
   /* Status colors */
@@ -90,27 +90,28 @@
   --status-error-border: rgba(239, 68, 68, 0.3);
 
   /* Editor/Markdown */
-  --editor-heading: #3f0c8d;
-  --editor-link: #7c3aed;
-  --editor-link-hover: #a838ff;
+  --editor-heading: #e0246e;
+  --editor-link: #e0246e;
+  --editor-link-hover: #fc3290;
   --editor-blockquote-border: #9ca3af;
   --editor-blockquote-text: #6b7280;
   --editor-code-bg: #f3f4f6;
   --editor-code-border: #e5e7eb;
+  --editor-code-text: var(--text-primary);
   --editor-divider: #d1d5db;
 
   /* Input fields */
   --input-bg: #ffffff;
   --input-border: #e4e4e7;
-  --input-border-focus: #737373;
+  --input-border-focus: #e0246e;
   --input-text: #1a1a1a;
 
   /* Focus ring */
-  --focus-ring: #737373;
-  --focus-ring-accent: rgba(124, 58, 237, 0.1);
+  --focus-ring: #e0246e;
+  --focus-ring-accent: rgba(252, 50, 144, 0.1);
 
   /* Selection */
-  --selection-bg: rgba(115, 115, 115, 0.3);
+  --selection-bg: rgba(252, 50, 144, 0.3);
 
   /* Editor cursor */
   --editor-cursor: #737373;
@@ -121,7 +122,7 @@
 
   /* Progress bar */
   --progress-bg: #f4f4f5;
-  --progress-fill: #7c3aed;
+  --progress-fill: #e0246e;
 
   /* Resize handle */
   --resize-handle: rgba(96, 165, 250, 0.5);
@@ -209,8 +210,8 @@
   --dialog-hover: #f0f0f2;
 
   /* Buttons */
-  --btn-primary-bg: #3f0c8d;
-  --btn-primary-bg-hover: #8017f5;
+  --btn-primary-bg: #e0246e;
+  --btn-primary-bg-hover: #fc3290;
   --btn-primary-text: #ffffff;
   --btn-secondary-bg: #ffffff;
   --btn-secondary-text: #52525b;
@@ -221,8 +222,8 @@
   --btn-danger-text: #ffffff;
 
   /* Accent/Brand colors */
-  --accent-primary: #7c3aed;
-  --accent-primary-hover: #6d28d9;
+  --accent-primary: #e0246e;
+  --accent-primary-hover: #fc3290;
   --accent-secondary: #14b8a6;
 
   /* Status colors */
@@ -234,27 +235,28 @@
   --status-error-border: rgba(239, 68, 68, 0.3);
 
   /* Editor/Markdown */
-  --editor-heading: #3f0c8d;
-  --editor-link: #7c3aed;
-  --editor-link-hover: #a838ff;
+  --editor-heading: #e0246e;
+  --editor-link: #e0246e;
+  --editor-link-hover: #fc3290;
   --editor-blockquote-border: #9ca3af;
   --editor-blockquote-text: #6b7280;
   --editor-code-bg: #f3f4f6;
   --editor-code-border: #e5e7eb;
+  --editor-code-text: var(--text-primary);
   --editor-divider: #d1d5db;
 
   /* Input fields */
   --input-bg: #ffffff;
   --input-border: #e4e4e7;
-  --input-border-focus: #737373;
+  --input-border-focus: #e0246e;
   --input-text: #1a1a1a;
 
   /* Focus ring */
-  --focus-ring: #737373;
-  --focus-ring-accent: rgba(124, 58, 237, 0.1);
+  --focus-ring: #e0246e;
+  --focus-ring-accent: rgba(252, 50, 144, 0.1);
 
   /* Selection */
-  --selection-bg: rgba(115, 115, 115, 0.3);
+  --selection-bg: rgba(252, 50, 144, 0.3);
 
   /* Editor cursor */
   --editor-cursor: #737373;
@@ -265,7 +267,7 @@
 
   /* Progress bar */
   --progress-bg: #f4f4f5;
-  --progress-fill: #7c3aed;
+  --progress-fill: #e0246e;
 
   /* Resize handle */
   --resize-handle: rgba(96, 165, 250, 0.5);
@@ -341,8 +343,8 @@
     --dialog-hover: #3c3c3c;
 
     /* Buttons */
-    --btn-primary-bg: #7c3aed;
-    --btn-primary-bg-hover: #8b5cf6;
+    --btn-primary-bg: #fc3290;
+    --btn-primary-bg-hover: #fd5ca8;
     --btn-primary-text: #ffffff;
     --btn-secondary-bg: #2d2d2d;
     --btn-secondary-text: #dcddde;
@@ -353,8 +355,8 @@
     --btn-danger-text: #ffffff;
 
     /* Accent/Brand colors */
-    --accent-primary: #8b5cf6;
-    --accent-primary-hover: #a78bfa;
+    --accent-primary: #fc3290;
+    --accent-primary-hover: #fd5ca8;
     --accent-secondary: #2dd4bf;
 
     /* Status colors */
@@ -366,27 +368,28 @@
     --status-error-border: rgba(239, 68, 68, 0.4);
 
     /* Editor/Markdown */
-    --editor-heading: #8b5cf6;
-    --editor-link: #8b5cf6;
-    --editor-link-hover: #a78bfa;
+    --editor-heading: #fc3290;
+    --editor-link: #fc3290;
+    --editor-link-hover: #fd5ca8;
     --editor-blockquote-border: #4b5563;
     --editor-blockquote-text: #9ca3af;
     --editor-code-bg: #2d2d2d;
     --editor-code-border: #404040;
+    --editor-code-text: #9ca3af;
     --editor-divider: #404040;
 
     /* Input fields */
     --input-bg: #1e1e1e;
     --input-border: #404040;
-    --input-border-focus: #8b5cf6;
+    --input-border-focus: #fc3290;
     --input-text: #dcddde;
 
     /* Focus ring */
-    --focus-ring: #8b5cf6;
-    --focus-ring-accent: rgba(139, 92, 246, 0.2);
+    --focus-ring: #fc3290;
+    --focus-ring-accent: rgba(252, 50, 144, 0.2);
 
     /* Selection */
-    --selection-bg: rgba(139, 92, 246, 0.3);
+    --selection-bg: rgba(252, 50, 144, 0.3);
 
     /* Editor cursor */
     --editor-cursor: #ffffff;
@@ -397,10 +400,10 @@
 
     /* Progress bar */
     --progress-bg: #2d2d2d;
-    --progress-fill: #8b5cf6;
+    --progress-fill: #fc3290;
 
     /* Resize handle */
-    --resize-handle: rgba(139, 92, 246, 0.5);
+    --resize-handle: rgba(252, 50, 144, 0.5);
 
     /* Dropdown menu */
     --dropdown-bg: #2d2d2d;
@@ -473,8 +476,8 @@
   --dialog-hover: #3c3c3c;
 
   /* Buttons */
-  --btn-primary-bg: #7c3aed;
-  --btn-primary-bg-hover: #8b5cf6;
+  --btn-primary-bg: #fc3290;
+  --btn-primary-bg-hover: #fd5ca8;
   --btn-primary-text: #ffffff;
   --btn-secondary-bg: #2d2d2d;
   --btn-secondary-text: #dcddde;
@@ -485,8 +488,8 @@
   --btn-danger-text: #ffffff;
 
   /* Accent/Brand colors */
-  --accent-primary: #8b5cf6;
-  --accent-primary-hover: #a78bfa;
+  --accent-primary: #fc3290;
+  --accent-primary-hover: #fd5ca8;
   --accent-secondary: #2dd4bf;
 
   /* Status colors */
@@ -498,27 +501,28 @@
   --status-error-border: rgba(239, 68, 68, 0.4);
 
   /* Editor/Markdown */
-  --editor-heading: #8b5cf6;
-  --editor-link: #8b5cf6;
-  --editor-link-hover: #a78bfa;
+  --editor-heading: #fc3290;
+  --editor-link: #fc3290;
+  --editor-link-hover: #fd5ca8;
   --editor-blockquote-border: #4b5563;
   --editor-blockquote-text: #9ca3af;
   --editor-code-bg: #2d2d2d;
   --editor-code-border: #404040;
+  --editor-code-text: #9ca3af;
   --editor-divider: #404040;
 
   /* Input fields */
   --input-bg: #1e1e1e;
   --input-border: #404040;
-  --input-border-focus: #8b5cf6;
+  --input-border-focus: #fc3290;
   --input-text: #dcddde;
 
   /* Focus ring */
-  --focus-ring: #8b5cf6;
-  --focus-ring-accent: rgba(139, 92, 246, 0.2);
+  --focus-ring: #fc3290;
+  --focus-ring-accent: rgba(252, 50, 144, 0.2);
 
   /* Selection */
-  --selection-bg: rgba(139, 92, 246, 0.3);
+  --selection-bg: rgba(252, 50, 144, 0.3);
 
   /* Editor cursor */
   --editor-cursor: #ffffff;
@@ -529,10 +533,10 @@
 
   /* Progress bar */
   --progress-bg: #2d2d2d;
-  --progress-fill: #8b5cf6;
+  --progress-fill: #fc3290;
 
   /* Resize handle */
-  --resize-handle: rgba(139, 92, 246, 0.5);
+  --resize-handle: rgba(252, 50, 144, 0.5);
 
   /* Dropdown menu */
   --dropdown-bg: #2d2d2d;
@@ -694,10 +698,16 @@ textarea::placeholder {
 textarea.feedback-textarea {
   background-color: #faf6f0 !important;
   border: 1px solid #d4c4a8 !important;
+  color: #333 !important;
+  caret-color: #333 !important;
 }
 
 textarea.feedback-textarea::placeholder {
   color: #888 !important;
+}
+
+textarea.feedback-textarea:focus::placeholder {
+  color: transparent !important;
 }
 
 /* Docs code block text selection */
