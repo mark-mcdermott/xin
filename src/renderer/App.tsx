@@ -1765,9 +1765,10 @@ const App: React.FC = () => {
             <FileText size={20} strokeWidth={1.5} />
           </button>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginBottom: '8px' }} title="File Tree" onClick={() => setSidebarTab('files')}>
+          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="File Tree" onClick={() => setSidebarTab('files')}>
             <FolderTree size={20} strokeWidth={1.5} />
           </button>
+          <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
           <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Tags" onClick={() => setSidebarTab('tags')}>
             <Code size={20} strokeWidth={1.5} />
           </button>
@@ -1800,6 +1801,20 @@ const App: React.FC = () => {
               </span>
             )}
           </button>
+          {/* Settings gear at bottom when sidebar is collapsed */}
+          {sidebarCollapsed && (
+            <>
+              <div style={{ flex: 1 }} />
+              <button
+                className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all"
+                style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginBottom: '10px', marginLeft: '1px' }}
+                title="Settings"
+                onClick={() => { setShowSettings(true); setActivePanel('settings'); }}
+              >
+                <Settings size={18} strokeWidth={1.5} />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Left Sidebar - File tree with toolbar */}
@@ -1886,7 +1901,7 @@ const App: React.FC = () => {
               src={logoRightFacing}
               alt="Xin"
               onClick={handleMechClick}
-              style={{ height: '42px', width: 'auto', cursor: 'pointer', position: 'relative', top: '4px' }}
+              style={{ height: '42px', width: 'auto', cursor: 'default', position: 'relative', top: '4px', zIndex: 51 }}
             />
             {/* Mech speech bubble */}
             <style>{`
@@ -2140,9 +2155,10 @@ const App: React.FC = () => {
         ) : activeFileTab ? (
           <>
             {/* Navigation bar with breadcrumb */}
-            <div className="flex items-center relative" style={{ paddingTop: '16px', paddingBottom: '10px', paddingLeft: '16px', paddingRight: '24px' }}>
-              {/* Left side - arrow buttons */}
-              <div className="flex items-center gap-2">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', paddingTop: '16px', paddingBottom: '10px', paddingLeft: '16px', paddingRight: '16px' }}>
+              {/* Both layers share the same grid cell */}
+              {/* Arrow buttons */}
+              <div style={{ gridRow: 1, gridColumn: 1, display: 'flex', alignItems: 'center', gap: '8px', zIndex: 1 }}>
                 <button
                   className={`p-1 rounded transition-colors ${canGoBack ? 'hover:bg-[var(--hover-bg)]' : 'opacity-40 cursor-default'}`}
                   style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }}
@@ -2163,9 +2179,11 @@ const App: React.FC = () => {
                 </button>
               </div>
 
-              {/* Center - breadcrumbs */}
-              <div className="absolute left-1/2 transform -translate-x-1/2">
-                <Breadcrumb path={selectedFile!} onNavigate={handleBreadcrumbNavigate} />
+              {/* Breadcrumbs - same grid cell, centered */}
+              <div style={{ gridRow: 1, gridColumn: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                <div style={{ pointerEvents: 'auto' }}>
+                  <Breadcrumb path={selectedFile!} onNavigate={handleBreadcrumbNavigate} />
+                </div>
               </div>
 
               {/* Right side - view mode icon (hidden - editor mode is now the only option)
@@ -2252,9 +2270,9 @@ const App: React.FC = () => {
         ) : activeRemoteTab ? (
           <>
             {/* Navigation bar for remote file */}
-            <div className="flex items-center relative" style={{ paddingTop: '16px', paddingBottom: '10px', paddingLeft: '16px', paddingRight: '24px' }}>
-              {/* Left side - arrow buttons */}
-              <div className="flex items-center gap-2">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', paddingTop: '16px', paddingBottom: '10px', paddingLeft: '16px', paddingRight: '16px' }}>
+              {/* Arrow buttons */}
+              <div style={{ gridRow: 1, gridColumn: 1, display: 'flex', alignItems: 'center', gap: '8px', zIndex: 1 }}>
                 <button
                   className={`p-1 rounded transition-colors ${canGoBack ? 'hover:bg-[var(--hover-bg)]' : 'opacity-40 cursor-default'}`}
                   style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }}
@@ -2275,11 +2293,13 @@ const App: React.FC = () => {
                 </button>
               </div>
 
-              {/* Center - remote file path */}
-              <div className="absolute left-1/2 transform -translate-x-1/2">
-                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                  {activeRemoteTab.path.split('/').pop()?.replace('.md', '')}
-                </span>
+              {/* Remote file path - same grid cell, centered */}
+              <div style={{ gridRow: 1, gridColumn: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                <div style={{ pointerEvents: 'auto' }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                    {activeRemoteTab.path.split('/').pop()?.replace('.md', '')}
+                  </span>
+                </div>
               </div>
             </div>
 

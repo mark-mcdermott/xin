@@ -417,18 +417,26 @@ const InlineCreateInput: React.FC<InlineCreateInputProps> = ({ type, onSubmit, o
         ref={inputRef}
         type="text"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          setValue(e.target.value);
+          // Auto-size input to content
+          if (inputRef.current) {
+            inputRef.current.style.width = `${Math.max(40, (e.target.value.length + 1) * 8)}px`;
+          }
+        }}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         placeholder={type === 'file' ? 'filename.md' : 'folder name'}
-        className="flex-1 bg-transparent outline-none"
+        className="outline-none"
         style={{
           fontSize: '13.75px',
           color: 'var(--sidebar-text)',
-          border: '1px solid var(--input-border-focus)',
-          borderRadius: '2px',
-          padding: '0 4px',
-          margin: '2px 0'
+          backgroundColor: 'var(--selection-bg)',
+          border: 'none',
+          borderRadius: '3px',
+          padding: '3px 4px',
+          margin: '2px 0',
+          width: `${Math.max(40, (value.length + 1) * 8)}px`
         }}
       />
     </div>
@@ -503,18 +511,24 @@ const InlineRenameInput: React.FC<InlineRenameInputProps> = ({ currentName, type
         ref={inputRef}
         type="text"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          setValue(e.target.value);
+          if (inputRef.current) {
+            inputRef.current.style.width = `${Math.max(40, (e.target.value.length + 1) * 8)}px`;
+          }
+        }}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
-        className="bg-transparent outline-none"
+        className="outline-none"
         style={{
           fontSize: '13.75px',
           color: 'var(--sidebar-text)',
-          border: '1px solid var(--input-border-focus)',
-          borderRadius: '2px',
-          padding: '0 4px',
+          backgroundColor: 'var(--selection-bg)',
+          border: 'none',
+          borderRadius: '3px',
+          padding: '3px 4px',
           margin: '2px 0',
-          minWidth: '100px'
+          width: `${Math.max(40, (value.length + 1) * 8)}px`
         }}
       />
     </div>

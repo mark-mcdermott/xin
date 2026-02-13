@@ -7,8 +7,7 @@ import {
   WidgetType,
   ViewPlugin,
   ViewUpdate,
-  keymap,
-  drawSelection
+  keymap
 } from '@codemirror/view';
 import { markdown } from '@codemirror/lang-markdown';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
@@ -132,11 +131,22 @@ function getSyntaxTokens(code: string, language: string, lineOffset: number): Sy
 }
 
 // ============================================================================
+// External link detection
+// ============================================================================
+
+function isExternalUrl(url: string): boolean {
+  if (/^https?:\/\//i.test(url)) return true;
+  // Match domain-like URLs: starts with a letter, contains a dot followed by 2+ chars
+  if (/^[a-zA-Z][a-zA-Z0-9._-]*\.[a-zA-Z]{2,}/.test(url)) return true;
+  return false;
+}
+
+// ============================================================================
 // Types for markdown element parsing
 // ============================================================================
 
 interface MarkdownElement {
-  type: 'bold' | 'italic' | 'code' | 'strikethrough' | 'link' | 'image' | 'tag' | 'highlight' | 'superscript' | 'subscript' | 'footnote_ref' | 'math_inline';
+  type: 'bold' | 'italic' | 'code' | 'strikethrough' | 'link' | 'link_partial' | 'image' | 'tag' | 'highlight' | 'superscript' | 'subscript' | 'footnote_ref' | 'math_inline';
   from: number;  // Start of entire element (including markers)
   to: number;    // End of entire element (including markers)
   openMarker: { from: number; to: number };
@@ -319,6 +329,24 @@ function parseInlineElements(text: string, lineFrom: number): MarkdownElement[] 
       closeMarker: { from: textEnd, to: fullTo },
       linkUrl
     });
+  }
+
+  // Partial links: [text]( with no closing paren yet (user is typing a link)
+  const partialLinkRegex = /\[([^\]]+)\]\([^)]*$/g;
+  while ((match = partialLinkRegex.exec(text)) !== null) {
+    const fullFrom = lineFrom + match.index;
+    const fullTo = lineFrom + match.index + match[0].length;
+    // Only add if not already covered by a complete link
+    const alreadyCovered = elements.some(el => el.type === 'link' && el.from <= fullFrom && el.to >= fullTo);
+    if (!alreadyCovered) {
+      elements.push({
+        type: 'link_partial',
+        from: fullFrom,
+        to: fullTo,
+        openMarker: { from: fullFrom, to: fullFrom },
+        closeMarker: { from: fullTo, to: fullTo }
+      });
+    }
   }
 
   // Tags: #tag-name
@@ -504,27 +532,7 @@ function parseHeaderElement(text: string, lineFrom: number): HeaderElement | nul
     };
   }
 
-  // Incomplete header: just # at start of line (either just # or #text without space)
-  // This gives Obsidian-like instant feedback while typing
-  const incompleteMatch = text.match(/^(#{1,6})(?=\S|$)/);
-  if (incompleteMatch) {
-    // Check if this is actually a tag (# followed by word chars) - tags should be styled differently
-    const isTagLike = text.match(/^#{1}[a-zA-Z0-9_-]+$/);
-    if (isTagLike) {
-      // Single # followed immediately by text looks like a tag - don't treat as header
-      return null;
-    }
-
-    return {
-      type: 'header',
-      level: incompleteMatch[1].length,
-      from: lineFrom,
-      to: lineFrom + text.length,
-      markerFrom: lineFrom,
-      markerTo: lineFrom + incompleteMatch[1].length,
-      isComplete: false
-    };
-  }
+  // No incomplete header matching - require space after # per CommonMark spec
 
   return null;
 }
@@ -1199,7 +1207,7 @@ function createDecorations(
           );
         }
 
-        // Hide the closing ``` line (always hide, even when cursor is on it)
+        // Always hide the closing ``` line
         decorations.push(
           Decoration.replace({}).range(line.from, line.to)
         );
@@ -1385,13 +1393,10 @@ function createDecorations(
     // Parse list elements
     const listEl = parseListElement(lineText, line.from);
     if (listEl) {
-      const cursorInMarker = cursorPos >= listEl.markerFrom && cursorPos <= listEl.markerTo;
-      if (!cursorInMarker) {
-        // Add a decoration to hide the marker
-        decorations.push(
-          Decoration.mark({ class: 'cm-hidden-marker' }).range(listEl.markerFrom, listEl.markerTo)
-        );
-      }
+      // Replace the marker with nothing - Decoration.replace handles cursor positioning properly
+      decorations.push(
+        Decoration.replace({}).range(listEl.markerFrom, listEl.markerTo)
+      );
       // Add bullet/number via line decoration
       if (listEl.listType === 'ul') {
         decorations.push(
@@ -1499,11 +1504,28 @@ function createDecorations(
             Decoration.mark({ class: 'cm-inline-code' }).range(contentFrom, contentTo)
           );
         } else if (el.type === 'link') {
+          if (cursorInElement) {
+            // Unfolded: bold the full [text](url) syntax, no underline/pointer
+            decorations.push(
+              Decoration.mark({ class: 'cm-link-syntax' }).range(el.from, el.to)
+            );
+          } else {
+            // Folded: clickable underlined link
+            const linkUrl = el.linkUrl || '';
+            const attrs: Record<string, string> = { 'data-url': linkUrl };
+            if (isExternalUrl(linkUrl)) {
+              attrs['data-external'] = 'true';
+            }
+            decorations.push(
+              Decoration.mark({
+                class: 'cm-link',
+                attributes: attrs
+              }).range(contentFrom, contentTo)
+            );
+          }
+        } else if (el.type === 'link_partial') {
           decorations.push(
-            Decoration.mark({
-              class: 'cm-link',
-              attributes: { 'data-url': el.linkUrl || '' }
-            }).range(contentFrom, contentTo)
+            Decoration.mark({ class: 'cm-link-syntax' }).range(el.from, el.to)
           );
         } else if (el.type === 'tag') {
           decorations.push(
@@ -1628,7 +1650,7 @@ const editorTheme = EditorView.theme({
   },
   '.cm-content': {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif',
-    padding: '40px 24px 24px 48px',
+    padding: '40px 48px 24px 48px',
     lineHeight: '1.75'
   },
   '.cm-line': {
@@ -1713,26 +1735,49 @@ const editorTheme = EditorView.theme({
   },
   '.cm-inline-code': {
     backgroundColor: 'var(--editor-code-bg)',
-    color: 'var(--text-primary)',
+    color: 'var(--editor-code-text)',
     padding: '0 4px',
     borderRadius: '3px',
     fontFamily: 'monospace',
     fontSize: '0.9em'
   },
+  '.cm-link-syntax': {
+    fontWeight: '600',
+    color: 'var(--accent-primary)'
+  },
   '.cm-link': {
-    color: '#7c3aed',
+    color: 'var(--accent-primary)',
+    fontWeight: '600',
     textDecoration: 'underline',
     cursor: 'pointer'
   },
+  '.cm-link[data-external]::after': {
+    content: '""',
+    display: 'inline-block',
+    width: 'calc(1.3em - 2px)',
+    height: 'calc(1.3em - 2px)',
+    marginLeft: '3px',
+    verticalAlign: 'baseline',
+    position: 'relative',
+    top: 'calc(0.15em + 1px)',
+    backgroundColor: 'currentColor',
+    maskImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E")`,
+    maskSize: 'contain',
+    maskRepeat: 'no-repeat',
+    WebkitMaskImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E")`,
+    WebkitMaskSize: 'contain',
+    WebkitMaskRepeat: 'no-repeat'
+  },
   '.cm-tag-link': {
-    color: '#7c3aed',
+    color: 'var(--accent-primary)',
+    fontWeight: '600',
     cursor: 'pointer',
     textDecoration: 'underline',
     textDecorationColor: 'transparent',
     transition: 'text-decoration-color 0.15s'
   },
   '.cm-tag-link:hover': {
-    textDecorationColor: '#7c3aed'
+    textDecorationColor: 'var(--accent-primary)'
   },
 
   // Highlight ==text==
@@ -1758,7 +1803,7 @@ const editorTheme = EditorView.theme({
 
   // Footnote reference [^1]
   '.cm-footnote-ref': {
-    color: '#7c3aed',
+    color: 'var(--accent-primary)',
     cursor: 'pointer',
     verticalAlign: 'super',
     fontSize: '0.75em',
@@ -1769,12 +1814,12 @@ const editorTheme = EditorView.theme({
   '.cm-footnote-def': {
     fontSize: '0.9em',
     color: '#6b7280',
-    borderLeft: '2px solid #7c3aed',
+    borderLeft: '2px solid var(--accent-primary)',
     paddingLeft: '8px',
     marginLeft: '8px'
   },
   '.cm-footnote-def-marker': {
-    color: '#7c3aed',
+    color: 'var(--accent-primary)',
     fontWeight: '600'
   },
 
@@ -1862,23 +1907,23 @@ const editorTheme = EditorView.theme({
 
   // List styles
   '.cm-list-bullet::before': {
-    content: '"•"',
-    position: 'absolute',
-    left: '24px',
-    color: 'inherit'
+    content: '"⏺"',
+    marginRight: '0.5em',
+    color: 'inherit',
+    pointerEvents: 'none'
   },
   '.cm-list-number': {
     // Numbers handled by content
   },
   '.cm-list-task-unchecked::before': {
     content: '"☐"',
-    position: 'absolute',
-    left: '24px'
+    marginRight: '0.5em',
+    pointerEvents: 'none'
   },
   '.cm-list-task-checked::before': {
     content: '"☑"',
-    position: 'absolute',
-    left: '24px'
+    marginRight: '0.5em',
+    pointerEvents: 'none'
   },
 
   // Blockquote
@@ -1895,7 +1940,8 @@ const editorTheme = EditorView.theme({
     textAlign: 'center',
     overflow: 'hidden',
     color: 'transparent',
-    fontSize: '0'
+    fontSize: '0',
+    margin: '12px 0'
   },
   '.cm-horizontal-rule::before': {
     content: '""',
@@ -1920,7 +1966,8 @@ const editorTheme = EditorView.theme({
 
   // Code block container and lines
   '.cm-code-block-first': {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: 'var(--editor-code-bg)',
+    color: 'var(--editor-code-text)',
     fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace',
     fontSize: '0.875em',
     lineHeight: '1.4',
@@ -1933,7 +1980,8 @@ const editorTheme = EditorView.theme({
     marginRight: '25px'
   },
   '.cm-code-block-middle': {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: 'var(--editor-code-bg)',
+    color: 'var(--editor-code-text)',
     fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace',
     fontSize: '0.875em',
     lineHeight: '1.4',
@@ -1943,7 +1991,8 @@ const editorTheme = EditorView.theme({
     marginRight: '25px'
   },
   '.cm-code-block-last': {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: 'var(--editor-code-bg)',
+    color: 'var(--editor-code-text)',
     fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace',
     fontSize: '0.875em',
     lineHeight: '1.4',
@@ -1956,7 +2005,8 @@ const editorTheme = EditorView.theme({
     marginRight: '25px'
   },
   '.cm-code-block-single': {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: 'var(--editor-code-bg)',
+    color: 'var(--editor-code-text)',
     fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace',
     fontSize: '0.875em',
     lineHeight: '1.4',
@@ -2027,7 +2077,7 @@ interface LiveMarkdownEditorProps {
   onTagClick?: (tag: string, newTab: boolean) => void;
   blogs?: Array<{ id: string; name: string }>;
   onPublishBlogBlock?: (blogId: string, content: string) => Promise<{ success: boolean; slug?: string }>;
-  contentPadding?: string; // CSS padding value, defaults to '40px 24px 24px 48px'
+  contentPadding?: string; // CSS padding value, defaults to '40px 48px 24px 48px'
   isRemote?: boolean; // Whether this is a remote CMS file
   onPublishRemote?: () => void; // Callback to publish remote file changes
 }
@@ -2099,7 +2149,7 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   onTagClick,
   blogs = [],
   onPublishBlogBlock,
-  contentPadding = '40px 24px 24px 48px',
+  contentPadding = '40px 48px 24px 48px',
   isRemote = false,
   onPublishRemote
 }) => {
@@ -2419,7 +2469,9 @@ tags: [""]
           }
 
           if (!isInsideBlogBlock(doc, pos)) {
-            return false;
+            // Default: insert tab (2 spaces)
+            view.dispatch(view.state.replaceSelection('  '));
+            return true;
           }
 
           const line = doc.lineAt(pos);
@@ -2475,6 +2527,102 @@ tags: [""]
       }
     ]);
 
+    // Keymap to handle backspace on list lines - remove entire marker instead of just one char
+    const listBackspaceKeymap = keymap.of([
+      {
+        key: 'Backspace',
+        run: (view) => {
+          const pos = view.state.selection.main.head;
+          const line = view.state.doc.lineAt(pos);
+          const lineText = line.text;
+          // Check if cursor is right after a list marker (- , * , + , or numbered 1. )
+          const ulMatch = lineText.match(/^(\s*)([-*+])\s+$/);
+          const olMatch = lineText.match(/^(\s*)(\d+)\.\s+$/);
+          const taskMatch = lineText.match(/^(\s*)([-*+])\s+\[([ xX])\]\s+$/);
+          if (taskMatch && pos === line.to) {
+            // Delete entire task marker
+            view.dispatch({ changes: { from: line.from, to: line.to } });
+            return true;
+          }
+          if (ulMatch && pos === line.to) {
+            // Delete entire ul marker
+            view.dispatch({ changes: { from: line.from, to: line.to } });
+            return true;
+          }
+          if (olMatch && pos === line.to) {
+            // Delete entire ol marker
+            view.dispatch({ changes: { from: line.from, to: line.to } });
+            return true;
+          }
+          return false;
+        }
+      }
+    ]);
+
+    // Enter key: no auto-indent except for indented list items
+    const enterKeymap = keymap.of([
+      {
+        key: 'Enter',
+        run: (view) => {
+          const pos = view.state.selection.main.head;
+          const doc = view.state.doc;
+          const line = doc.lineAt(pos);
+          const lineText = line.text;
+
+          // Check if current line is a list item with indent
+          const listMatch = lineText.match(/^(\s+)([-*+])\s+/);
+          const olMatch = lineText.match(/^(\s+)(\d+)\.\s+/);
+          const taskMatch = lineText.match(/^(\s+)([-*+])\s+\[([ xX])\]\s+/);
+          if (taskMatch || listMatch || olMatch) {
+            // Preserve indent and continue list
+            const indent = (taskMatch || listMatch || olMatch)![1];
+            const marker = taskMatch ? `${(taskMatch)[2]} [ ] ` : listMatch ? `${listMatch[2]} ` : olMatch ? `${parseInt(olMatch[2]) + 1}. ` : '';
+            view.dispatch({
+              changes: { from: pos, insert: '\n' + indent + marker },
+              selection: { anchor: pos + 1 + indent.length + marker.length }
+            });
+            return true;
+          }
+
+          // Non-indented list: continue the list without indent
+          const ulMatch = lineText.match(/^([-*+])\s+.+/);
+          const olMatchNoIndent = lineText.match(/^(\d+)\.\s+.+/);
+          const taskMatchNoIndent = lineText.match(/^([-*+])\s+\[([ xX])\]\s+.+/);
+          if (taskMatchNoIndent) {
+            view.dispatch({
+              changes: { from: pos, insert: '\n- [ ] ' },
+              selection: { anchor: pos + 7 }
+            });
+            return true;
+          }
+          if (ulMatch && !taskMatchNoIndent) {
+            const marker = ulMatch[1];
+            view.dispatch({
+              changes: { from: pos, insert: '\n' + marker + ' ' },
+              selection: { anchor: pos + 1 + marker.length + 1 }
+            });
+            return true;
+          }
+          if (olMatchNoIndent) {
+            const nextNum = parseInt(olMatchNoIndent[1]) + 1;
+            const insert = '\n' + nextNum + '. ';
+            view.dispatch({
+              changes: { from: pos, insert },
+              selection: { anchor: pos + insert.length }
+            });
+            return true;
+          }
+
+          // Default: insert newline with no indentation
+          view.dispatch({
+            changes: { from: pos, insert: '\n' },
+            selection: { anchor: pos + 1 }
+          });
+          return true;
+        }
+      }
+    ]);
+
     // Keymap to detect === + Enter and insert template
     const blogBlockKeymap = keymap.of([
       {
@@ -2521,36 +2669,73 @@ tags: [""]
       if (update.docChanged) {
         scheduleSave();
 
-        // Ensure there's always a line after code blocks
         const doc = update.state.doc;
-        const lastLine = doc.line(doc.lines);
-        const lastLineText = lastLine.text.trim();
+        const pos = update.state.selection.main.head;
+        const cursorLine = doc.lineAt(pos);
+        const cursorLineText = cursorLine.text;
 
-        // If document ends with ``` (closing code block), add a newline
-        if (lastLineText === '```') {
-          // Count ``` to see if this is a closing one (even count means it's closing)
+        // Auto-complete code blocks: when ``` is typed (opening), insert newline + closing ```
+        if (cursorLineText.startsWith('```') && pos === cursorLine.to) {
+          // Count ``` lines up to and including this one
           let backtickCount = 0;
-          for (let i = 1; i <= doc.lines; i++) {
+          for (let i = 1; i <= cursorLine.number; i++) {
             if (doc.line(i).text.startsWith('```')) {
               backtickCount++;
             }
           }
-          // Even count means the last ``` is a closing one
-          if (backtickCount % 2 === 0) {
-            setTimeout(() => {
-              update.view.dispatch({
-                changes: { from: doc.length, insert: '\n' }
-              });
-            }, 0);
+          // Odd count means this is an opening ``` - auto-close it
+          if (backtickCount % 2 === 1) {
+            // Check there isn't already a closing ``` after this line
+            let hasClosing = false;
+            for (let i = cursorLine.number + 1; i <= doc.lines; i++) {
+              if (doc.line(i).text.startsWith('```')) {
+                hasClosing = true;
+                break;
+              }
+            }
+            if (!hasClosing) {
+              setTimeout(() => {
+                const insertPos = cursorLine.to;
+                update.view.dispatch({
+                  changes: { from: insertPos, insert: '\n\n```\n' },
+                  selection: { anchor: insertPos + 1 }
+                });
+              }, 0);
+            }
           }
         }
       }
-      if (update.selectionSet) {
+      if (update.selectionSet || update.docChanged) {
         const pos = update.state.selection.main.head;
-        const line = update.state.doc.lineAt(pos);
-
+        const doc = update.state.doc;
+        const line = doc.lineAt(pos);
         const lineText = line.text;
-        if (lineText.match(/^blog:\s*"/) && isInsideBlogBlock(update.state.doc, pos)) {
+
+        // If cursor is on a closing ``` line, move it to the next line
+        if (lineText.trim() === '```') {
+          // Check if this is a closing ``` (even count up to this line)
+          let backtickCount = 0;
+          for (let i = 1; i <= line.number; i++) {
+            if (doc.line(i).text.startsWith('```')) {
+              backtickCount++;
+            }
+          }
+          if (backtickCount % 2 === 0) {
+            // This is a closing ``` - move cursor to next line
+            setTimeout(() => {
+              const currentDoc = update.view.state.doc;
+              const currentLine = currentDoc.lineAt(Math.min(pos, currentDoc.length));
+              if (currentLine.number < currentDoc.lines) {
+                const nextLine = currentDoc.line(currentLine.number + 1);
+                update.view.dispatch({
+                  selection: { anchor: nextLine.from }
+                });
+              }
+            }, 0);
+          }
+        }
+
+        if (lineText.match(/^blog:\s*"/) && isInsideBlogBlock(doc, pos)) {
           setTimeout(() => {
             startCompletion(update.view);
           }, 50);
@@ -2562,9 +2747,10 @@ tags: [""]
       doc: initialContent,
       extensions: [
         cursorPositionField,
-        drawSelection({ cursorBlinkRate: 0 }), // Disable cursor blink to prevent disappearing
         history(),
+        listBackspaceKeymap,
         blogBlockKeymap,
+        enterKeymap,
         tabKeymap,
         spellCheckKeymap, // Cmd+. to show spelling suggestions
         keymap.of([...defaultKeymap, ...historyKeymap]),
@@ -2574,6 +2760,27 @@ tags: [""]
           override: [blogCompletionSource, atBlogCompletionSource, spellCheckCompletionSource],
           activateOnTyping: true,
           defaultKeymap: true
+        }),
+        // Intercept clicks on folded links at the CM level (before cursor placement)
+        EditorView.domEventHandlers({
+          mousedown(event) {
+            const target = event.target as HTMLElement;
+            if (target.classList.contains('cm-link') && target.dataset.url) {
+              event.preventDefault();
+              event.stopPropagation();
+              let url = target.dataset.url;
+              if (isExternalUrl(url) && !/^https?:\/\//i.test(url)) {
+                url = 'https://' + url;
+              }
+              if (window.electronAPI?.shell?.openExternal) {
+                window.electronAPI.shell.openExternal(url);
+              } else {
+                window.open(url, '_blank');
+              }
+              return true; // Prevent CM from handling
+            }
+            return false;
+          }
         }),
         // Pass stable boolean for hasPublish (actual callback is in ref)
         createLivePreviewPlugin(onPublishBlogBlockRef.current ? () => {} : undefined, blogsRef.current, isRemote),
@@ -2940,22 +3147,45 @@ tags: [""]
       }
     }
 
-    // Handle link clicks
+    // Handle link clicks - open in browser on regular click
     if (target.classList.contains('cm-link')) {
-      const url = target.dataset.url;
-      if (url && (e.metaKey || e.ctrlKey)) {
+      let url = target.dataset.url;
+      if (url) {
         e.preventDefault();
         e.stopPropagation();
-        window.open(url, '_blank');
+        if (isExternalUrl(url) && !/^https?:\/\//i.test(url)) {
+          url = 'https://' + url;
+        }
+        if (window.electronAPI?.shell?.openExternal) {
+          window.electronAPI.shell.openExternal(url);
+        } else {
+          window.open(url, '_blank');
+        }
+        // Prevent cursor from landing in the link (which would unfold it)
+        return;
       }
     }
   }, [onTagClick]);
+
+  // Intercept mousedown on links to prevent CodeMirror from placing cursor
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('cm-link') && target.dataset.url) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (target.classList.contains('cm-tag-link') && target.dataset.tag) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, []);
 
   return (
     <div
       ref={containerRef}
       className="h-full w-full overflow-hidden"
       style={{ backgroundColor: 'var(--bg-primary)' }}
+      onMouseDown={handleMouseDown}
       onClick={handleClick}
     />
   );
