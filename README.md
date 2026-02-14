@@ -2,269 +2,53 @@
 
 [![Tests](https://github.com/mark-mcdermott/xin/actions/workflows/test.yml/badge.svg)](https://github.com/mark-mcdermott/xin/actions/workflows/test.yml)
 
-> A lightweight desktop app for note-taking and blog publishing, inspired by Obsidian.
-
-## Installation (macOS)
-
-```bash
-git clone https://github.com/mark-mcdermott/xin.git
-cd xin
-pnpm install
-pnpm run package
-```
-
-Then:
-1. Double-click the `.dmg` file in `/release`
-2. Drag the Xin icon to Applications in the window that appears
-3. Open Xin from your Applications folder
-
-## What is Xin Notes?
-
-A small Electron app that looks like Obsidian and has core note-taking functionality, without all the extra stuff Obsidian has. And it has a few nice extra features.
-
-## Special Features
-
-- A quick publish to blog post feature (for static site blogs with GitHub repos where the site is on Cloudflare Pages):
-  - Even if you mix everything into daily notes, you can still quickly make a blog post in the middle and publish just the post, without publishing the rest of the note.
-  - Can handle multiple blogs and let's you select which blog you want to publish each post to.
-  - Shows a nice progress bar and publish status so you know if the build is still running and if it succeeds or not.
-- New blogpost template macro
-  - typing `===` and then pressing enter will create a blank blog post template where your cursor is. This includes frontmatter for post meta-information.
-  - See [Blog Publishing Guide](#blog-publishing-guide) below for details.
-- A delete all content under a single tag feature
-  - You can mix all your work and personal notes into daily notes using tags to track of the different content types.
-  - You can later easily delete all content from one tag. Handy if you ever leave your current job and need to quickly delete all work notes without losing any of your personal notes.
-
-### Core Note Taking Features
-
-- Daily notes (auto-created with YYYY-MM-DD format)
-- Optional tag-based content blocks (opened by `#<topic>`, closed by `---`)
-- Tag views (both editable and read-only aggregated views of all content under a tag)
-- File tree sidebar
-- Markdown editor with live rendering
-- Split pane support for editing and previewing markdown at the same time
-
-### Possible Future Features
-
-- Custom emoji support
-- More CMS feautres like list all posts and post edit/delete functionality
-- Smoother UX with micro-interaction focus
-
-## Blog Publishing Guide
-
-Xin can publish blog posts directly to static site blogs hosted on GitHub with Cloudflare Pages deployment.
-
-### Creating a Blog Post
-
-Type `===` and press Enter to insert a blog post template:
-
-```markdown
-===
----
-blog: ""
-title: ""
-subtitle: ""
-publishDate: "2026-01-03"
-tags: [""]
----
-
-Your blog content here...
-===
-```
-
-### Frontmatter Fields
-
-| Field | Description |
-|-------|-------------|
-| `blog` | Name of the blog to publish to (must match a blog configured in Settings) |
-| `title` | Post title - also determines the filename (e.g., "My Post" → `my-post.md`) |
-| `subtitle` | Short subtitle for SEO/previews |
-| `publishDate` | Publication date in YYYY-MM-DD format (auto-filled with today's date) |
-| `tags` | Array of tags for the post |
-| `slug` | Auto-set after publish - tracks filename for rename detection |
-| `published` | Auto-set to `true` after successful publish |
-
-### Tag Format (Standard Frontmatter)
-
-Tags use YAML array format with quoted strings:
-
-```yaml
-tags: ["javascript"]              # one tag
-tags: ["js", "react"]             # two tags
-tags: ["web development"]         # one multi-word tag
-tags: ["how to", "tutorial"]      # two tags, first has a space
-```
-
-- Each quoted string is one tag
-- Commas separate tags (spaces after commas are optional)
-- Quotes preserve spaces for multi-word tags
-
-### @ Post Format (Alternative)
-
-Instead of the `=== ... ===` block format, you can use the @ decorator format for a more compact syntax:
-
-```markdown
-@myblog post
-@title My Blog Post Title
-@subtitle A short description
-@tags javascript, react, webdev
-@publishDate 2026-01-04
-
-Your blog content here...
----
-```
-
-#### @ Decorator Fields
-
-| Field | Description |
-|-------|-------------|
-| `@blogname post` | Start a post for the named blog (must match Settings) |
-| `@title` | Post title (required) |
-| `@subtitle` | Short subtitle for SEO/previews |
-| `@publishDate` | Publication date (YYYY-MM-DD). If omitted, uses current date |
-| `@tags` | Comma-separated list of tags (one word each, spaces ignored) |
-| `@slug` | Auto-set after publish |
-| `@published` | Auto-set to `true` after successful publish |
-
-#### @ Tags Format
-
-The `@tags` field accepts a simple comma-separated list:
-
-```markdown
-@tags javascript, react, tutorial
-```
-
-- Tags are separated by commas
-- Spaces around tags are ignored
-- Only single-word tags are supported
-- Square brackets and quotes are optional and will be stripped
-
-### Publishing Workflow
-
-1. **Write your post** inside the `=== ... ===` block
-2. **Fill in the frontmatter** (blog name, title, etc.)
-3. **Click the rocket icon** next to "blog post" header
-4. **Watch the progress popup** - shows preparing, pushing, building, deploying
-5. **Green checkmark appears** when published successfully
-
-### Republishing
-
-To update an already-published post:
-
-1. Make your edits to the content
-2. Click the **green checkmark** - it switches to a rocket icon
-3. Click the **rocket** to republish
-4. The post overwrites the previous version
-
-**Title changes are handled automatically:** If you change the title, the old file is deleted and a new one is created with the new name. The `slug` field in frontmatter tracks the original filename.
-
-### Two Publishing Methods
-
-#### 1. Direct Publishing (Blog Block)
-
-- Write a standalone post in a `=== ... ===` block
-- Publish that exact content
-- Best for: writing a complete blog post from scratch
-
-#### 2. Tag-Based Publishing
-
-- Tag sections across multiple daily notes with `#my-topic`
-- Go to Tags sidebar → click the tag → click Publish
-- All content tagged with `#my-topic` gets aggregated into one post
-- Best for: collecting scattered notes/thoughts into a cohesive post
-
-Example of tagged sections in daily notes:
-
-```markdown
-// In 2026-01-01.md
-#my-project
-Started building the authentication system today...
----
-
-// In 2026-01-02.md
-#my-project
-Added OAuth support and fixed the login bug...
----
-
-// In 2026-01-03.md
-#my-project
-Finished testing, ready for deployment.
----
-```
-
-Then publish all `#my-project` content as a single blog post from the tag view.
-
-### Tag Section Format
-
-For tag-based publishing, sections are delimited by:
-
-- **Opening:** `#tag-name` on its own line
-- **Closing:** `---` (three dashes) OR another `#tag` OR end of file
-
-The `---` separator is optional if the tagged content goes to the end of the file.
-
-## Tech Stack
-
-- **Electron 39** - Desktop app framework
-- **React 19** - UI components and state management
-- **CodeMirror 6** - Markdown editor with live preview
-- **Vite 7** - Build tool and dev server
-- **TypeScript 5** - Type safety
-- **Tailwind CSS 4** - Utility-first styling (mixed with inline styles)
-- **Playwright** - E2E testing
-
-## Project Structure
-
-```
-xin-notes/
-├── src/
-│   ├── main/              # Electron main process
-│   ├── renderer/          # React UI
-│   └── preload/           # IPC bridge
-├── tests/
-│   └── e2e/               # E2E tests
-├── .llm/                  # AI assistant context
-└── dist/                  # Build output
-```
-
-## Development
-
-```bash
-# Install dependencies
-pnpm install
-
-# Start development server
-pnpm run dev
-
-# Run tests
-pnpm run test:e2e
-
-# Build for production
-pnpm run build
-
-# Package for macOS
-pnpm run package
-```
-
-## AI Assistant Integration
-
-This project includes LLM documentation in `.llm/` for AI coding assistants like Claude Code, GitHub Copilot, and Cursor.
-
-Entry points (symlinks):
-
-- `CLAUDE.md` - Claude Code
-- `AGENTS.md` - GitHub Copilot
-
-These files provide context about the project architecture, coding standards, and development workflows.
-
-## Dev Process
-
-I vibe-coded this in Claude Code in about a week's worth of evenings/weekends, using the Playwright MPC server to have Claude check its own work.
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Status
-
-Currently in a beta release phase. I want the UX "micro-interactions" to be cleaner before proper release.
+<div align="center">
+  <img src="src/renderer/assets/pink-and-gray-mech-right.png" width="75" />
+  <h1>Xin</h1>
+  <p>A desktop mac app for note-taking and publishing blog posts</p>
+  <p>100% vibe coded and not heavily reviewed/hardened. Use at your own risk!!</p>
+</div>
+
+## Quick Start
+
+1. Download the latest `.dmg` file from GitHub Releases
+2. Open the `.dmg` file
+3. Drag Xin into your Applications folder
+4. Open Xin from Applications
+5. On first launch, macOS may block it — go to System Settings → Privacy & Security and click "Open Anyway"
+
+## Features
+
+### Note-taking
+- Like Obsidian, you can write notes in live preview markdown style and they are saved to `.md` files on your computer.
+- Unlike Obsidian, Xin for note-taking is very simple and only does a few things (but tries to do them well):
+  - `#tags`: tags in Xin start with a `#` and categorize your notes by topic
+  - `[[internal links]]`: internal links in Xin have the `[[<note name>]]` format. A clicked internal link will take you to that note or create it if it doesn't exist.
+  - markdown support: `# headers`, `[external links](https://url.com)`, `**bold**`, `*italic*`, `- bullet lists`, etc should all work as expected
+  - daily notes: each date a blank note titled with the date is created. You can write stream-of-consciousness style all day in one place, tagging each section of the note for easy access later by category.
+
+### Blog CMS
+- Xin makes it easy to quickly draft or write full blog posts throughout your day, without logging into a separate system or even navigate away from what you're doing.
+- You can even write a blog post inside your daily note, without messing up the rest of your notes for that day.
+- Xin has two ways to start a blog post in your daily note or anywhere else:
+  - type `===` and hit enter and you have a blank post template to fill in
+  - or type `@<your blog name> post`, then write your post and when you're done type `---` and hit enter to fence it off from your other writings in the same note
+  - either post style will show a rocket icon you can click to instantly publish to your blog
+- For the above to work, you have to fill in your blog site details in the Settings page. Only markdown-style static site blogs are supported and must have their own github repo and must be hosted on CloudFlare Pages (free). It's a workflow I've come to love over time, so that's how I set it up. If others want adaptors for other blog hosts, it's always a possibility down the road.
+- Xin supports multiple blogs and multiple blog sites. If you have more than one blog you publish to, you can easily specify which blog each post will publish to. 
+- You can easily edit old blog posts with Xin. It supports full importing/syncing of all your blog's posts.
+
+## Why Build Xin (For Notes)?
+I've used Obsidian and Notion on and off for years for daily notes for work and programming learning. At one point, I wanted to write both work and personal notes in my daily note, but wanted to be able to easily delete an entire tag an have all writings tagged with that tag to dissapear without breaking the other parts of my daily notes that had other tags. At that time, Obsidian couldn't do that easily (I believe it's possible now with extensions, etc), so I built this. I wanted to be able to write notes I could keep forever but be able to quickly delete all work notes if I got another computer or left my job or something like that. So I built Xin and love it and use it everyday.
+
+## Why Build Xin (As A CMS)?
+I've liked the idea of a desktop blog post publishing app for a long time. I looked into what was availble and there wan't much and what there was I didn't really like. I looked into Obsidian as CMS, but thought I needed more of a "one-click publish" features with a progress bar showing the publish status. So I built this and use it for blog post publishing all the time.
+
+## The Xin Story
+I vibe coded a working version of this in Claude over two weeks of evening/weekend work. Then over the next month I vibe coded refinements in the micro-interactions, added more features, etc. to get this project to where it is now. It was my first vibe-coded application done to this level of detail and usability. I learned a lot about Electron, TypeScript, CodeMirror, e-commerce and a lot more. I do plan to slowly rebuild this by hand to drill down and learn more.
+
+## Support The Project
+Do you wear clothes or know someone who does? If so, consider buying a comfy Xin hoodie and supporting this project. There is a cart button in the app where you can see the hoodies and stickers with the cool, quirky Xin mech logo. There is also a place there to just buy me a coffee or file a bug report if you feel so inclined. Starring the repo in Github is a free way to support the project, as well as any contributing code for any new features you might have in mind.
+
+## More Info
+Xin has detailed documentation in-app. Click the book icon in the left sidebar.
