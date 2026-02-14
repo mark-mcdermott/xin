@@ -39,6 +39,11 @@
       "gatekeeperAssess": false
     }
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron"
+    ]
+  },
   "keywords": [
     "electron",
     "notes",
