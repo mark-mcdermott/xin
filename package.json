@@ -24,6 +24,7 @@
   "build": {
     "appId": "com.xin.notes",
     "productName": "Xin",
+    "publish": null,
     "directories": {
       "output": "release"
     },
