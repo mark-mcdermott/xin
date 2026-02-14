@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Calendar,
   Settings,
@@ -65,6 +65,21 @@ const App: React.FC = () => {
   const { vaultPath, fileTree, loading, error, readFile, writeFile, createFile, createFolder, deleteFile, moveFile, renameFile, getTodayNote, getDailyNote, getDailyNoteDates, refreshFileTree } = useVault();
   const { tags, loading: tagsLoading, getTagContent, deleteTag, refreshTags } = useTags();
   const { remoteFolders, getPostContent, saveDraft, publishPost, hasDraft, refresh: refreshRemotePosts, refreshBlog, renameFile: renameRemoteFile, deleteFile: deleteRemoteFile } = useRemotePosts();
+
+  // Derive note names from file tree for wikilink support
+  const noteNames = useMemo(() => {
+    if (!fileTree) return [];
+    const names: string[] = [];
+    const collect = (node: typeof fileTree) => {
+      if (!node) return;
+      if (node.type === 'file' && node.name.endsWith('.md')) {
+        names.push(node.name.replace('.md', ''));
+      }
+      node.children?.forEach(collect);
+    };
+    collect(fileTree);
+    return names;
+  }, [fileTree]);
 
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('files');
   const [openTabs, setOpenTabs] = useState<Tab[]>([]);
@@ -819,6 +834,36 @@ const App: React.FC = () => {
     }
     setActivePanel('file');
     pushToHistory({ type: 'tag', tag });
+  };
+
+  const handleWikilinkClick = async (noteName: string, _newTab: boolean) => {
+    // Search file tree for matching file (case-insensitive)
+    let matchPath: string | null = null;
+    const search = (node: typeof fileTree) => {
+      if (!node || matchPath) return;
+      if (node.type === 'file' && node.name.replace('.md', '').toLowerCase() === noteName.toLowerCase()) {
+        matchPath = node.path;
+      }
+      node.children?.forEach(search);
+    };
+    search(fileTree);
+
+    if (matchPath) {
+      handleFileClick(matchPath);
+    } else {
+      // Create the note and open it
+      const path = `${noteName}.md`;
+      const initialContent = `# ${noteName}\n\n`;
+      try {
+        await createFile(path, initialContent);
+        await refreshFileTree();
+        setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
+        setActiveTabIndex(openTabs.length);
+        setActivePanel('file');
+      } catch (err: any) {
+        console.error('Failed to create file:', err);
+      }
+    }
   };
 
   const handleEditorTagClick = (tag: string, newTab: boolean) => {
@@ -2219,6 +2264,8 @@ const App: React.FC = () => {
                   filePath={selectedFile!}
                   onSave={handleSave}
                   onTagClick={handleEditorTagClick}
+                  onWikilinkClick={handleWikilinkClick}
+                  noteNames={noteNames}
                   blogs={blogs}
                   onPublishBlogBlock={handlePublishBlogBlock}
                 />
@@ -2311,6 +2358,8 @@ const App: React.FC = () => {
                 filePath={activeRemoteTab.path}
                 onSave={handleRemoteSave}
                 onTagClick={handleEditorTagClick}
+                onWikilinkClick={handleWikilinkClick}
+                noteNames={noteNames}
                 blogs={blogs}
                 onPublishBlogBlock={handlePublishBlogBlock}
                 isRemote={true}

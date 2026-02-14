@@ -252,7 +252,7 @@ export const DocsPage: React.FC<DocsPageProps> = ({
         flushList();
         elements.push(
           <h1 key={`h1-${elements.length}`} style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px', marginTop: i > 0 ? '32px' : '0' }}>
-            {line.slice(2)}
+            {renderInlineMarkdown(line.slice(2))}
           </h1>
         );
         continue;
@@ -262,7 +262,7 @@ export const DocsPage: React.FC<DocsPageProps> = ({
         flushList();
         elements.push(
           <h2 key={`h2-${elements.length}`} style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px', marginTop: '28px' }}>
-            {line.slice(3)}
+            {renderInlineMarkdown(line.slice(3))}
           </h2>
         );
         continue;
@@ -272,7 +272,7 @@ export const DocsPage: React.FC<DocsPageProps> = ({
         flushList();
         elements.push(
           <h3 key={`h3-${elements.length}`} style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '10px', marginTop: '24px' }}>
-            {line.slice(4)}
+            {renderInlineMarkdown(line.slice(4))}
           </h3>
         );
         continue;

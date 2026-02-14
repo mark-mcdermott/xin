@@ -5,7 +5,7 @@ Full session initialization workflow for learning sessions.
 ## Workflow
 
 1. **Check current state** from @docs/learning-progress.md
-2. **Verify development environment** (`npm run dev` works)
+2. **Verify development environment** (`pnpm run dev` works)
 3. **Prepare git branch** (delegate to git-manager if needed)
 4. **Set session objectives** (1-3 specific goals)
 5. **Load topic context** from curriculum and relevant docs

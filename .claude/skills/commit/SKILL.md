@@ -9,7 +9,7 @@ Quick git commits with conversation context.
 
 ## Workflow
 1. Run `git status` to see changes
-2. Run `npm run lint` and `npm run test:e2e` if applicable
+2. Run `pnpm run lint` and `pnpm run test:e2e` if applicable
 3. Stage relevant files (`git add <specific files>`)
 4. Commit with gitmoji + one-sentence message
 
