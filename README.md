@@ -9,8 +9,8 @@
 ```bash
 git clone https://github.com/mark-mcdermott/xin.git
 cd xin
-npm install
-npm run package
+pnpm install
+pnpm run package
 ```
 
 Then:
@@ -231,19 +231,19 @@ xin-notes/
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Start development server
-npm run dev
+pnpm run dev
 
 # Run tests
-npm run test
+pnpm run test:e2e
 
 # Build for production
-npm run build
+pnpm run build
 
 # Package for macOS
-npm run package
+pnpm run package
 ```
 
 ## AI Assistant Integration
