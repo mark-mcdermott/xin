@@ -85,7 +85,7 @@ export function createApplicationMenu(): void {
         { type: 'separator' as const },
         { role: 'reload' as const },
         { role: 'forceReload' as const },
-        { role: 'toggleDevTools' as const },
+        ...(process.env.VITE_DEV_SERVER_URL ? [{ role: 'toggleDevTools' as const }] : []),
         { type: 'separator' as const },
         { role: 'resetZoom' as const },
         { role: 'zoomIn' as const },

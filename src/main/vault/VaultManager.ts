@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs';
-import { join, parse, relative } from 'path';
+import { join, parse, relative, resolve, normalize, sep } from 'path';
 import { app } from 'electron';
 import type { VaultConfig, VaultEntry, FileNode, VaultStructure } from './types';
 import { DEFAULT_VAULT_STRUCTURE } from './types';
@@ -11,6 +11,33 @@ export class VaultManager {
 
   constructor() {
     this.configPath = join(app.getPath('userData'), 'vault-config.json');
+  }
+
+  /**
+   * Validate that a resolved path stays within the vault directory.
+   * Prevents path traversal attacks (e.g. ../../etc/passwd).
+   */
+  private assertPathInVault(fullPath: string): void {
+    if (!this.vaultPath) {
+      throw new Error('Vault not initialized');
+    }
+    const normalizedVault = normalize(resolve(this.vaultPath)) + sep;
+    const normalizedPath = normalize(resolve(fullPath));
+    if (!normalizedPath.startsWith(normalizedVault) && normalizedPath !== normalizedVault.slice(0, -1)) {
+      throw new Error('Access denied: path outside vault');
+    }
+  }
+
+  /**
+   * Resolve a relative path within the vault and validate it.
+   */
+  private safeResolve(relativePath: string): string {
+    if (!this.vaultPath) {
+      throw new Error('Vault not initialized');
+    }
+    const fullPath = join(this.vaultPath, relativePath);
+    this.assertPathInVault(fullPath);
+    return fullPath;
   }
 
   /**
@@ -147,11 +174,7 @@ export class VaultManager {
    * Read file contents
    */
   async readFile(relativePath: string): Promise<string> {
-    if (!this.vaultPath) {
-      throw new Error('Vault not initialized');
-    }
-
-    const fullPath = join(this.vaultPath, relativePath);
+    const fullPath = this.safeResolve(relativePath);
     return fs.readFile(fullPath, 'utf-8');
   }
 
@@ -159,11 +182,7 @@ export class VaultManager {
    * Write file contents
    */
   async writeFile(relativePath: string, content: string): Promise<void> {
-    if (!this.vaultPath) {
-      throw new Error('Vault not initialized');
-    }
-
-    const fullPath = join(this.vaultPath, relativePath);
+    const fullPath = this.safeResolve(relativePath);
     await fs.writeFile(fullPath, content, 'utf-8');
   }
 
@@ -171,11 +190,7 @@ export class VaultManager {
    * Create a new file
    */
   async createFile(relativePath: string, content: string = ''): Promise<void> {
-    if (!this.vaultPath) {
-      throw new Error('Vault not initialized');
-    }
-
-    const fullPath = join(this.vaultPath, relativePath);
+    const fullPath = this.safeResolve(relativePath);
 
     // Ensure parent directory exists
     await fs.mkdir(parse(fullPath).dir, { recursive: true });
@@ -197,11 +212,7 @@ export class VaultManager {
    * Delete a file or folder
    */
   async deleteFile(relativePath: string): Promise<void> {
-    if (!this.vaultPath) {
-      throw new Error('Vault not initialized');
-    }
-
-    const fullPath = join(this.vaultPath, relativePath);
+    const fullPath = this.safeResolve(relativePath);
     const stats = await fs.stat(fullPath);
 
     if (stats.isDirectory()) {
@@ -215,11 +226,7 @@ export class VaultManager {
    * Create a folder
    */
   async createFolder(relativePath: string): Promise<void> {
-    if (!this.vaultPath) {
-      throw new Error('Vault not initialized');
-    }
-
-    const fullPath = join(this.vaultPath, relativePath);
+    const fullPath = this.safeResolve(relativePath);
     await fs.mkdir(fullPath, { recursive: true });
   }
 
@@ -230,14 +237,10 @@ export class VaultManager {
    * @returns The new relative path of the moved item
    */
   async moveFile(sourcePath: string, destFolder: string): Promise<string> {
-    if (!this.vaultPath) {
-      throw new Error('Vault not initialized');
-    }
-
-    const sourceFullPath = join(this.vaultPath, sourcePath);
+    const sourceFullPath = this.safeResolve(sourcePath);
     const sourceName = parse(sourcePath).base;
-    const destFullPath = join(this.vaultPath, destFolder, sourceName);
     const newRelativePath = join(destFolder, sourceName);
+    const destFullPath = this.safeResolve(newRelativePath);
 
     // Check source exists
     try {
@@ -247,7 +250,7 @@ export class VaultManager {
     }
 
     // Check destination folder exists
-    const destFolderFullPath = join(this.vaultPath, destFolder);
+    const destFolderFullPath = this.safeResolve(destFolder);
     try {
       await fs.access(destFolderFullPath);
     } catch {
@@ -275,14 +278,15 @@ export class VaultManager {
    * @returns The new relative path
    */
   async renameFile(oldPath: string, newName: string): Promise<string> {
-    if (!this.vaultPath) {
-      throw new Error('Vault not initialized');
+    // Validate newName doesn't contain path separators
+    if (newName.includes('/') || newName.includes('\\') || newName.includes('..')) {
+      throw new Error('Invalid file name');
     }
 
-    const oldFullPath = join(this.vaultPath, oldPath);
+    const oldFullPath = this.safeResolve(oldPath);
     const parentDir = oldPath.substring(0, oldPath.lastIndexOf('/')) || '';
     const newRelativePath = parentDir ? `${parentDir}/${newName}` : newName;
-    const newFullPath = join(this.vaultPath, newRelativePath);
+    const newFullPath = this.safeResolve(newRelativePath);
 
     // Check source exists
     try {
@@ -348,6 +352,10 @@ export class VaultManager {
    * Get daily note for a specific date (YY-MM-DD or YYYY-MM-DD)
    */
   async getDailyNote(date: string): Promise<{ path: string; content: string; isNew: boolean }> {
+    // Validate date format to prevent path traversal
+    if (!/^\d{2,4}-\d{2}-\d{2}$/.test(date)) {
+      throw new Error('Invalid date format');
+    }
     const notePath = join(DEFAULT_VAULT_STRUCTURE.dailyNotes, `${date}.md`);
 
     try {

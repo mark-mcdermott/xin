@@ -10,6 +10,8 @@ interface CheckoutPageProps {
   goForward: () => void;
 }
 
+const CHECKOUT_API_URL = 'https://xun-store-api.mark-2c0.workers.dev/api/checkout';
+
 export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onComplete, canGoBack, canGoForward, goBack, goForward }) => {
   const { items, getSubtotal, clear } = useCart();
   const subtotal = getSubtotal();
@@ -34,7 +36,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onComplete, canGoBac
       }));
 
       // Call the checkout API
-      const response = await fetch('https://xun-store-api.mark-2c0.workers.dev/api/checkout', {
+      const response = await fetch(CHECKOUT_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,6 +53,11 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onComplete, canGoBac
 
       // Open Stripe Checkout in the user's default browser
       if (data.checkoutUrl) {
+        // Validate the checkout URL is from Stripe
+        const checkoutUrl = new URL(data.checkoutUrl);
+        if (checkoutUrl.protocol !== 'https:' || !checkoutUrl.hostname.endsWith('.stripe.com')) {
+          throw new Error('Invalid checkout URL');
+        }
         window.electronAPI?.shell?.openExternal(data.checkoutUrl);
         // Clear cart after redirecting to checkout
         clear();
