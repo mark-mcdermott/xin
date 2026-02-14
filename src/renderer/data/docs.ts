@@ -29,6 +29,7 @@ export const docsTree: DocSection[] = [
       { id: 'daily-notes-intro', title: 'Introduction' },
       { id: 'file-format', title: 'File Format' },
       { id: 'markdown-support', title: 'Markdown Support' },
+      { id: 'wikilinks', title: 'Wikilinks' },
       { id: 'tips-workflows', title: 'Tips & Workflows' },
     ],
   },
@@ -323,6 +324,44 @@ Use three dashes to create a divider (also used for tag sections):
 \`\`\`markdown
 ---
 \`\`\``,
+  },
+
+  'wikilinks': {
+    id: 'wikilinks',
+    title: 'Wikilinks',
+    content: `# Wikilinks
+
+Link between your notes using \`[[note name]]\` syntax, inspired by Obsidian.
+
+## Creating a Wikilink
+
+Type \`[[\` to open the autocomplete dropdown, then select a note name. The closing \`]]\` is inserted automatically.
+
+You can also type the full syntax manually:
+
+\`\`\`markdown
+Check out [[my other note]] for more details.
+\`\`\`
+
+## How They Look
+
+When your cursor is away from a wikilink, the \`[[\` and \`]]\` markers are hidden and the note name is displayed as a styled link. Move your cursor into the wikilink to reveal the full syntax for editing.
+
+## Existing vs Missing Notes
+
+- **Existing notes** appear as accent-colored links, just like tags
+- **Missing notes** appear dimmer with a dashed underline, indicating the note doesn't exist yet
+
+## Clicking Wikilinks
+
+Click a wikilink to navigate to that note:
+
+- If the note **exists**, it opens in a new tab
+- If the note **doesn't exist**, Xin creates it for you and opens it
+
+## Autocomplete
+
+Typing \`[[\` triggers an autocomplete dropdown showing all notes in your vault. As you type, the list filters to match. Select a note to insert its name with the closing \`]]\`.`,
   },
 
   'tips-workflows': {

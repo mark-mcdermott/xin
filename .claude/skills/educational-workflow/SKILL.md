@@ -4,7 +4,7 @@ Structured patterns for educational sessions on the Xin codebase.
 
 ## Learning Session Start
 1. Check @docs/learning-progress.md for current status
-2. Verify environment: `npm run dev` works
+2. Verify environment: `pnpm run dev` works
 3. Prepare git branch if needed (delegate to git-manager)
 4. Set session objectives (1-3 specific goals)
 

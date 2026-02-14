@@ -4,7 +4,7 @@ Playwright-based testing for the Xin Electron app.
 
 ## Workflow
 
-1. **Run existing E2E tests**: `npm run test:e2e`
+1. **Run existing E2E tests**: `pnpm run test:e2e`
 2. **Check test results**: Review pass/fail and console output
 3. **If tests pass**: Report success
 4. **If tests fail**: Analyze failure, suggest fix

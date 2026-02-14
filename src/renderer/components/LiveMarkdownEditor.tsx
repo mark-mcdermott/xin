@@ -146,7 +146,7 @@ function isExternalUrl(url: string): boolean {
 // ============================================================================
 
 interface MarkdownElement {
-  type: 'bold' | 'italic' | 'code' | 'strikethrough' | 'link' | 'link_partial' | 'image' | 'tag' | 'highlight' | 'superscript' | 'subscript' | 'footnote_ref' | 'math_inline';
+  type: 'bold' | 'italic' | 'code' | 'strikethrough' | 'link' | 'link_partial' | 'image' | 'tag' | 'highlight' | 'superscript' | 'subscript' | 'footnote_ref' | 'math_inline' | 'wikilink';
   from: number;  // Start of entire element (including markers)
   to: number;    // End of entire element (including markers)
   openMarker: { from: number; to: number };
@@ -155,6 +155,8 @@ interface MarkdownElement {
   linkUrl?: string;
   // For footnotes: reference id
   footnoteId?: string;
+  // For wikilinks: target note name
+  wikitarget?: string;
 }
 
 interface HeaderElement {
@@ -360,6 +362,21 @@ function parseInlineElements(text: string, lineFrom: number): MarkdownElement[] 
       to: tagEnd,
       openMarker: { from: tagStart, to: tagStart },
       closeMarker: { from: tagEnd, to: tagEnd }
+    });
+  }
+
+  // Wikilinks: [[note name]]
+  const wikilinkRegex = /\[\[([^\]]+)\]\]/g;
+  while ((match = wikilinkRegex.exec(text)) !== null) {
+    const fullFrom = lineFrom + match.index;
+    const fullTo = lineFrom + match.index + match[0].length;
+    elements.push({
+      type: 'wikilink',
+      from: fullFrom,
+      to: fullTo,
+      openMarker: { from: fullFrom, to: fullFrom + 2 },
+      closeMarker: { from: fullTo - 2, to: fullTo },
+      wikitarget: match[1]
     });
   }
 
@@ -983,12 +1000,14 @@ function createDecorations(
   view: EditorView,
   onPublish?: (blogId: string, content: string) => void,
   blogs?: Array<{ id: string; name: string }>,
-  isRemote?: boolean
+  isRemote?: boolean,
+  noteNames?: string[]
 ): DecorationSet {
   try {
     const cursorPos = view.state.field(cursorPositionField) ?? -1;
     const decorations: Range<Decoration>[] = [];
     const doc = view.state.doc;
+    const noteNamesLookup = new Set((noteNames ?? []).map(n => n.toLowerCase()));
 
   let inCodeBlock = false;
   let codeBlockStartLine = -1;
@@ -1547,6 +1566,20 @@ function createDecorations(
               attributes: { 'data-tag': lineText.slice(el.from - line.from, el.to - line.from) }
             }).range(el.from, el.to)
           );
+        } else if (el.type === 'wikilink') {
+          const targetExists = noteNamesLookup.has((el.wikitarget ?? '').toLowerCase());
+          if (cursorInElement) {
+            decorations.push(
+              Decoration.mark({ class: 'cm-wikilink-syntax' }).range(el.from, el.to)
+            );
+          } else {
+            decorations.push(
+              Decoration.mark({
+                class: targetExists ? 'cm-wikilink' : 'cm-wikilink-missing',
+                attributes: { 'data-target': el.wikitarget || '' }
+              }).range(contentFrom, contentTo)
+            );
+          }
         } else if (el.type === 'highlight') {
           decorations.push(
             Decoration.mark({ class: 'cm-highlight' }).range(contentFrom, contentTo)
@@ -1615,34 +1648,23 @@ function createDecorations(
 function createLivePreviewPlugin(
   onPublish?: (blogId: string, content: string) => void,
   blogs?: Array<{ id: string; name: string }>,
-  isRemote?: boolean
+  isRemote?: boolean,
+  noteNamesRef?: { current: string[] }
 ) {
   return ViewPlugin.fromClass(
     class {
       decorations: DecorationSet;
-      lastSelectionLine: number;
 
       constructor(view: EditorView) {
-        this.decorations = createDecorations(view, onPublish, blogs, isRemote);
-        this.lastSelectionLine = view.state.doc.lineAt(view.state.selection.main.head).number;
+        this.decorations = createDecorations(view, onPublish, blogs, isRemote, noteNamesRef?.current);
       }
 
       update(update: ViewUpdate) {
-        // Always rebuild on doc changes
-        if (update.docChanged) {
-          this.decorations = createDecorations(update.view, onPublish, blogs, isRemote);
-          this.lastSelectionLine = update.view.state.doc.lineAt(update.view.state.selection.main.head).number;
-          return;
-        }
-
-        // Only rebuild on selection changes if the cursor moved to a different line
-        // This prevents scroll jumps from unnecessary decoration rebuilds
-        if (update.selectionSet) {
-          const currentLine = update.view.state.doc.lineAt(update.view.state.selection.main.head).number;
-          if (currentLine !== this.lastSelectionLine) {
-            this.lastSelectionLine = currentLine;
-            this.decorations = createDecorations(update.view, onPublish, blogs, isRemote);
-          }
+        // Rebuild on doc changes or any selection change
+        // Selection-level rebuild is needed so inline elements (wikilinks, bold, etc.)
+        // fold/unfold as the cursor moves through them within the same line
+        if (update.docChanged || update.selectionSet) {
+          this.decorations = createDecorations(update.view, onPublish, blogs, isRemote, noteNamesRef?.current);
         }
       }
     },
@@ -1791,6 +1813,36 @@ const editorTheme = EditorView.theme({
   },
   '.cm-tag-link:hover': {
     textDecorationColor: 'var(--accent-primary)'
+  },
+
+  // Wikilinks [[note name]]
+  '.cm-wikilink-syntax': {
+    fontWeight: '600',
+    color: 'var(--accent-primary)'
+  },
+  '.cm-wikilink': {
+    color: 'var(--accent-primary)',
+    fontWeight: '600',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    textDecorationColor: 'transparent',
+    transition: 'text-decoration-color 0.15s'
+  },
+  '.cm-wikilink:hover': {
+    textDecorationColor: 'var(--accent-primary)'
+  },
+  '.cm-wikilink-missing': {
+    color: 'var(--text-secondary)',
+    fontWeight: '600',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    textDecorationStyle: 'dashed',
+    textDecorationColor: 'var(--text-secondary)',
+    opacity: '0.7',
+    transition: 'opacity 0.15s'
+  },
+  '.cm-wikilink-missing:hover': {
+    opacity: '1'
   },
 
   // Highlight ==text==
@@ -2093,6 +2145,8 @@ interface LiveMarkdownEditorProps {
   filePath: string;
   onSave: (content: string) => Promise<void>;
   onTagClick?: (tag: string, newTab: boolean) => void;
+  onWikilinkClick?: (noteName: string, newTab: boolean) => void;
+  noteNames?: string[]; // Note names (without .md) for wikilink existence checking and autocomplete
   blogs?: Array<{ id: string; name: string }>;
   onPublishBlogBlock?: (blogId: string, content: string) => Promise<{ success: boolean; slug?: string }>;
   contentPadding?: string; // CSS padding value, defaults to '40px 48px 24px 48px'
@@ -2165,6 +2219,8 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   filePath,
   onSave,
   onTagClick,
+  onWikilinkClick,
+  noteNames,
   blogs = [],
   onPublishBlogBlock,
   contentPadding = '40px 48px 24px 48px',
@@ -2180,6 +2236,12 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
 
   const blogsRef = useRef(blogs);
   blogsRef.current = blogs;
+
+  const noteNamesRef = useRef<string[]>(noteNames ?? []);
+  noteNamesRef.current = noteNames ?? [];
+
+  const onWikilinkClickRef = useRef(onWikilinkClick);
+  onWikilinkClickRef.current = onWikilinkClick;
 
   const onPublishBlogBlockRef = useRef(onPublishBlogBlock);
   onPublishBlogBlockRef.current = onPublishBlogBlock;
@@ -2245,6 +2307,49 @@ tags: [""]
     }
 
     return { inside: inAtPost, blogName: atPostBlogName, startLine: atPostStartLine };
+  }, []);
+
+  // Wikilink autocomplete source (triggers on [[)
+  const wikilinkCompletionSource = useCallback((context: CompletionContext) => {
+    const line = context.state.doc.lineAt(context.pos);
+    const lineText = line.text;
+    const cursorInLine = context.pos - line.from;
+    const beforeCursor = lineText.slice(0, cursorInLine);
+
+    // Look for [[ before cursor without closing ]]
+    const openBracketIndex = beforeCursor.lastIndexOf('[[');
+    if (openBracketIndex === -1) return null;
+
+    // Make sure there's no ]] between [[ and cursor
+    const afterOpen = beforeCursor.slice(openBracketIndex + 2);
+    if (afterOpen.includes(']]')) return null;
+
+    const typed = afterOpen;
+    const from = line.from + openBracketIndex + 2;
+
+    const names = noteNamesRef.current;
+    const options: Completion[] = names
+      .filter(name => name.toLowerCase().includes(typed.toLowerCase()))
+      .map(name => ({
+        label: name,
+        type: 'text',
+        apply: (view: EditorView) => {
+          view.dispatch({
+            changes: { from, to: context.pos, insert: name + ']]' },
+            selection: { anchor: from + name.length + 2 }
+          });
+        },
+        detail: 'note'
+      }));
+
+    if (options.length === 0) return null;
+
+    return {
+      from,
+      to: context.pos,
+      options,
+      validFor: /^[^\]]*$/
+    };
   }, []);
 
   // @ autocomplete source for blog selection (triggers on @)
@@ -2717,6 +2822,8 @@ tags: [""]
       }
     ]);
 
+    let pendingMouseClick = false;
+
     const updateListener = EditorView.updateListener.of(update => {
       if (update.docChanged) {
         scheduleSave();
@@ -2763,6 +2870,25 @@ tags: [""]
         const line = doc.lineAt(pos);
         const lineText = line.text;
 
+        // After mouse click, snap cursor past ]] if it landed inside a wikilink's closing marker
+        if (pendingMouseClick && update.selectionSet) {
+          pendingMouseClick = false;
+          const wlRegex = /\[\[([^\]]+)\]\]/g;
+          let wlMatch;
+          while ((wlMatch = wlRegex.exec(lineText)) !== null) {
+            const closeStart = line.from + wlMatch.index + wlMatch[0].length - 2;
+            const closeEnd = closeStart + 2;
+            if (pos >= closeStart && pos < closeEnd) {
+              setTimeout(() => {
+                update.view.dispatch({
+                  selection: { anchor: closeEnd }
+                });
+              }, 0);
+              break;
+            }
+          }
+        }
+
         // If cursor is on a closing ``` line, move it to the next line
         if (lineText.trim() === '```') {
           // Check if this is a closing ``` (even count up to this line)
@@ -2792,6 +2918,15 @@ tags: [""]
             startCompletion(update.view);
           }, 50);
         }
+
+        // Trigger wikilink autocomplete when [[ is typed
+        const cursorInLine = pos - line.from;
+        const beforeCursor = lineText.slice(0, cursorInLine);
+        if (beforeCursor.endsWith('[[') || (beforeCursor.includes('[[') && !beforeCursor.slice(beforeCursor.lastIndexOf('[[')).includes(']]'))) {
+          setTimeout(() => {
+            startCompletion(update.view);
+          }, 50);
+        }
       }
     });
 
@@ -2810,11 +2945,11 @@ tags: [""]
         saveKeymap,
         markdown(),
         autocompletion({
-          override: [blogCompletionSource, atBlogCompletionSource, spellCheckCompletionSource],
+          override: [wikilinkCompletionSource, blogCompletionSource, atBlogCompletionSource, spellCheckCompletionSource],
           activateOnTyping: true,
           defaultKeymap: true
         }),
-        // Intercept clicks on folded links at the CM level (before cursor placement)
+        // Intercept clicks on folded links and wikilinks at the CM level (before cursor placement)
         EditorView.domEventHandlers({
           mousedown(event) {
             const target = event.target as HTMLElement;
@@ -2832,11 +2967,23 @@ tags: [""]
               }
               return true; // Prevent CM from handling
             }
+            if (target.classList.contains('cm-wikilink') || target.classList.contains('cm-wikilink-missing')) {
+              event.preventDefault();
+              event.stopPropagation();
+              const targetNote = target.dataset.target;
+              if (targetNote && onWikilinkClickRef.current) {
+                const newTab = event.metaKey || event.ctrlKey;
+                onWikilinkClickRef.current(targetNote, newTab);
+              }
+              return true; // Prevent CM from handling
+            }
+            // Track generic clicks for wikilink cursor adjustment
+            pendingMouseClick = true;
             return false;
           }
         }),
         // Pass stable boolean for hasPublish (actual callback is in ref)
-        createLivePreviewPlugin(onPublishBlogBlockRef.current ? () => {} : undefined, blogsRef.current, isRemote),
+        createLivePreviewPlugin(onPublishBlogBlockRef.current ? () => {} : undefined, blogsRef.current, isRemote, noteNamesRef),
         // Spell check underlines
         spellCheckLinter,
         spellCheckTheme,
@@ -2862,7 +3009,7 @@ tags: [""]
       view.destroy();
     };
     // Note: onPublishBlogBlock and blogs are accessed via refs to avoid recreating editor
-  }, [getBlogBlockTemplate, blogCompletionSource, atBlogCompletionSource, paddingTheme]);
+  }, [getBlogBlockTemplate, wikilinkCompletionSource, blogCompletionSource, atBlogCompletionSource, paddingTheme]);
 
   // Update content when file changes externally (not from our own save)
   useEffect(() => {
@@ -3185,7 +3332,7 @@ tags: [""]
     // onPublishBlogBlock accessed via ref to avoid re-registering listeners
   }, [scheduleSave]);
 
-  // Handle clicks on tags and links
+  // Handle clicks on tags and links (wikilinks handled at CM level in domEventHandlers)
   const handleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
 
@@ -3228,6 +3375,10 @@ tags: [""]
       e.stopPropagation();
     }
     if (target.classList.contains('cm-tag-link') && target.dataset.tag) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (target.classList.contains('cm-wikilink') || target.classList.contains('cm-wikilink-missing')) {
       e.preventDefault();
       e.stopPropagation();
     }

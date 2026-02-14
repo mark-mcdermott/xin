@@ -7,12 +7,12 @@ These common tasks should be executed automatically without asking permission:
 
 | Task | When | Command |
 |------|------|---------|
-| **Lint** | After writing/editing code | `npm run lint` |
-| **Run tests** | After writing code, before commits | `npm run test:e2e` |
-| **Check versions** | When installing packages | `npm ls <package>` |
+| **Lint** | After writing/editing code | `pnpm run lint` |
+| **Run tests** | After writing code, before commits | `pnpm run test:e2e` |
+| **Check versions** | When installing packages | `pnpm ls <package>` |
 | **Git status** | Before commits, when assessing state | `git status` |
 | **Read files** | When context is needed | Use Read tool |
-| **Typecheck** | After TypeScript changes | `npm run typecheck` |
+| **Typecheck** | After TypeScript changes | `pnpm run typecheck` |
 
 **Rationale**: These are non-destructive, frequent operations. Asking permission adds friction without adding safety. Just do them and report results.
 

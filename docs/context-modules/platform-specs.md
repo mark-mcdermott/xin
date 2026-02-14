@@ -71,14 +71,14 @@ xin/
 ## Key Commands
 
 ```bash
-npm run dev          # Development server with HMR
-npm run build        # TypeScript compile + Vite build
-npm run package      # Build + macOS DMG packaging
-npm run test:e2e     # Playwright E2E tests
-npm run lint         # ESLint
-npm run lint:fix     # ESLint with auto-fix
-npm run format       # Prettier formatting
-npm run typecheck    # TypeScript validation (--noEmit)
+pnpm run dev          # Development server with HMR
+pnpm run build        # TypeScript compile + Vite build
+pnpm run package      # Build + macOS DMG packaging
+pnpm run test:e2e     # Playwright E2E tests
+pnpm run lint         # ESLint
+pnpm run lint:fix     # ESLint with auto-fix
+pnpm run format       # Prettier formatting
+pnpm run typecheck    # TypeScript validation (--noEmit)
 ```
 
 ## Architecture Notes
