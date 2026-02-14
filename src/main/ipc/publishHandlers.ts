@@ -174,7 +174,7 @@ export function registerPublishHandlers(): void {
     try {
       // Call Cloudflare API to verify credentials and project exists
       const response = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${cloudflare.accountId}/pages/projects/${cloudflare.projectName}`,
+        `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(cloudflare.accountId)}/pages/projects/${encodeURIComponent(cloudflare.projectName)}`,
         {
           headers: {
             'Authorization': `Bearer ${cloudflare.token}`,

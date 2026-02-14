@@ -90,6 +90,14 @@ ipcMain.handle('theme:set', async (_event, theme: 'light' | 'dark' | 'system') =
 
 // Shell IPC handler - open URLs in default browser
 ipcMain.handle('shell:open-external', async (_event, url: string) => {
+  // Only allow http and https URLs
+  if (typeof url !== 'string') {
+    throw new Error('Invalid URL');
+  }
+  const parsed = new URL(url);
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('Only http and https URLs are allowed');
+  }
   await shell.openExternal(url);
 });
 

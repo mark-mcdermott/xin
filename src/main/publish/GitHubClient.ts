@@ -16,7 +16,7 @@ export class GitHubClient {
    * Get the latest commit SHA for a branch
    */
   async getLatestCommitSha(repo: string, branch: string): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/repos/${repo}/git/refs/heads/${branch}`, {
+    const response = await fetch(`${this.baseUrl}/repos/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, {
       headers: this.getHeaders()
     });
 
@@ -42,7 +42,7 @@ export class GitHubClient {
     console.log('  branch:', branch);
 
     const response = await fetch(
-      `${this.baseUrl}/repos/${repo}/contents/${path}?ref=${branch}`,
+      `${this.baseUrl}/repos/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`,
       {
         headers: this.getHeaders()
       }
@@ -97,7 +97,7 @@ export class GitHubClient {
       body.sha = sha; // Required for updates
     }
 
-    const response = await fetch(`${this.baseUrl}/repos/${repo}/contents/${path}`, {
+    const response = await fetch(`${this.baseUrl}/repos/${repo}/contents/${encodeURIComponent(path)}`, {
       method: 'PUT',
       headers: this.getHeaders(),
       body: JSON.stringify(body)
@@ -126,7 +126,7 @@ export class GitHubClient {
     branch: string,
     sha: string
   ): Promise<GitHubCommitResponse> {
-    const response = await fetch(`${this.baseUrl}/repos/${repo}/contents/${path}`, {
+    const response = await fetch(`${this.baseUrl}/repos/${repo}/contents/${encodeURIComponent(path)}`, {
       method: 'DELETE',
       headers: this.getHeaders(),
       body: JSON.stringify({
@@ -172,7 +172,7 @@ export class GitHubClient {
     branch: string
   ): Promise<Array<{ name: string; path: string; sha: string; type: 'file' | 'dir' }>> {
     const response = await fetch(
-      `${this.baseUrl}/repos/${repo}/contents/${path}?ref=${branch}`,
+      `${this.baseUrl}/repos/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`,
       {
         headers: this.getHeaders()
       }
@@ -253,7 +253,7 @@ export class GitHubClient {
     // Get the latest commit SHA and its tree
     const latestCommitSha = await this.getLatestCommitSha(repo, branch);
     const commitResponse = await fetch(
-      `${this.baseUrl}/repos/${repo}/git/commits/${latestCommitSha}`,
+      `${this.baseUrl}/repos/${repo}/git/commits/${encodeURIComponent(latestCommitSha)}`,
       { headers: this.getHeaders() }
     );
     if (!commitResponse.ok) {
@@ -324,7 +324,7 @@ export class GitHubClient {
 
     // Update the branch reference
     const refResponse = await fetch(
-      `${this.baseUrl}/repos/${repo}/git/refs/heads/${branch}`,
+      `${this.baseUrl}/repos/${repo}/git/refs/heads/${encodeURIComponent(branch)}`,
       {
         method: 'PATCH',
         headers: this.getHeaders(),
@@ -348,7 +348,7 @@ export class GitHubClient {
    */
   async getWorkflowRunsForCommit(repo: string, commitSha: string): Promise<any[]> {
     const response = await fetch(
-      `${this.baseUrl}/repos/${repo}/actions/runs?head_sha=${commitSha}`,
+      `${this.baseUrl}/repos/${repo}/actions/runs?head_sha=${encodeURIComponent(commitSha)}`,
       {
         headers: this.getHeaders()
       }

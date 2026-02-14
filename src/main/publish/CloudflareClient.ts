@@ -18,7 +18,7 @@ export class CloudflareClient {
    * Get recent deployments for a Pages project
    */
   async getDeployments(projectName: string, limit = 10): Promise<CloudflareDeployment[]> {
-    const url = `${this.baseUrl}/accounts/${this.accountId}/pages/projects/${projectName}/deployments`;
+    const url = `${this.baseUrl}/accounts/${encodeURIComponent(this.accountId)}/pages/projects/${encodeURIComponent(projectName)}/deployments`;
 
     const response = await fetch(url, {
       headers: this.getHeaders()
@@ -42,7 +42,7 @@ export class CloudflareClient {
    * Get a specific deployment by ID
    */
   async getDeployment(projectName: string, deploymentId: string): Promise<CloudflareDeployment> {
-    const url = `${this.baseUrl}/accounts/${this.accountId}/pages/projects/${projectName}/deployments/${deploymentId}`;
+    const url = `${this.baseUrl}/accounts/${encodeURIComponent(this.accountId)}/pages/projects/${encodeURIComponent(projectName)}/deployments/${encodeURIComponent(deploymentId)}`;
 
     const response = await fetch(url, {
       headers: this.getHeaders()

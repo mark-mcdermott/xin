@@ -934,6 +934,12 @@ class SimpleTextWidget extends WidgetType {
   }
 }
 
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // Widget for rendering images
 class ImageWidget extends WidgetType {
   constructor(readonly src: string, readonly alt: string) {
@@ -1194,7 +1200,7 @@ function createDecorations(
           if (codeBlockLang) {
             decorations.push(
               Decoration.replace({
-                widget: new SimpleTextWidget(`<span class="cm-code-block-label">${codeBlockLang}</span>`)
+                widget: new SimpleTextWidget(`<span class="cm-code-block-label">${escapeHtml(codeBlockLang)}</span>`)
               }).range(openingLine.from, openingLine.to)
             );
           } else {
@@ -1363,7 +1369,8 @@ function createDecorations(
           );
         }
         // Hide the # markers unless cursor is on this line (keep them visible while editing)
-        if (!cursorOnThisLine) {
+        // Line 1 (title) always hides the # since it's sandboxed as h1
+        if (!cursorOnThisLine || i === 1) {
           decorations.push(
             Decoration.mark({ class: 'cm-hidden-marker' }).range(header.markerFrom, header.markerTo)
           );
@@ -1371,6 +1378,12 @@ function createDecorations(
           // Cursor on line - show markers but style them as header
           decorations.push(
             Decoration.mark({ class: `cm-header cm-header-${header.level} cm-header-marker` }).range(header.markerFrom, header.markerTo)
+          );
+        }
+        // Add visual separator below line 1 (title) to create sandboxed title feel
+        if (i === 1 && header.level === 1) {
+          decorations.push(
+            Decoration.line({ class: 'cm-title-line' }).range(line.from)
           );
         }
       } else {
@@ -1883,6 +1896,11 @@ const editorTheme = EditorView.theme({
   '.cm-header-1': {
     fontSize: '1.75em',
     lineHeight: '1.2'
+  },
+  '.cm-title-line': {
+    borderBottom: '1px solid var(--border-primary)',
+    paddingBottom: '12px',
+    marginBottom: '4px'
   },
   '.cm-header-2': {
     fontSize: '1.5em',
@@ -2559,6 +2577,40 @@ tags: [""]
       }
     ]);
 
+    // Title isolation: prevent arrow key navigation between line 1 (title) and the rest of the editor
+    const titleIsolationKeymap = keymap.of([
+      {
+        key: 'ArrowDown',
+        run: (view) => {
+          const pos = view.state.selection.main.head;
+          const line = view.state.doc.lineAt(pos);
+          // Block ArrowDown from line 1 (the title line)
+          if (line.number === 1) return true;
+          return false;
+        }
+      },
+      {
+        key: 'ArrowUp',
+        run: (view) => {
+          const pos = view.state.selection.main.head;
+          const line = view.state.doc.lineAt(pos);
+          // Block ArrowUp from line 2 into the title
+          if (line.number === 2) return true;
+          return false;
+        }
+      },
+      {
+        key: 'Enter',
+        run: (view) => {
+          const pos = view.state.selection.main.head;
+          const line = view.state.doc.lineAt(pos);
+          // Block Enter on the title line (can't add lines below title from title)
+          if (line.number === 1) return true;
+          return false;
+        }
+      }
+    ]);
+
     // Enter key: no auto-indent except for indented list items
     const enterKeymap = keymap.of([
       {
@@ -2752,6 +2804,7 @@ tags: [""]
         blogBlockKeymap,
         enterKeymap,
         tabKeymap,
+        titleIsolationKeymap,
         spellCheckKeymap, // Cmd+. to show spelling suggestions
         keymap.of([...defaultKeymap, ...historyKeymap]),
         saveKeymap,
