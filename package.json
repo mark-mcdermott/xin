@@ -19,7 +19,7 @@
     "clean": "rm -rf dist node_modules/.vite",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "package": "npm run build && electron-builder --mac"
+    "package": "pnpm run build && electron-builder --mac"
   },
   "build": {
     "appId": "com.xun.notes",
@@ -33,7 +33,12 @@
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "resources/icon.icns",
-      "target": "dmg",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": "universal"
+        }
+      ],
       "identity": null,
       "hardenedRuntime": false,
       "gatekeeperAssess": false
