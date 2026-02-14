@@ -11,7 +11,7 @@
 
 ## Quick Start
 
-1. Download the latest `.dmg` file from GitHub Releases
+1. Download the latest `.dmg` under Releases in the right sidebar of the GitHub repo
 2. Open the `.dmg` file
 3. Drag Xun into your Applications folder
 4. Open Xun from Applications
