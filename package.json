@@ -24,6 +24,7 @@
   "build": {
     "appId": "com.xun.notes",
     "productName": "Xun",
+    "publish": null,
     "directories": {
       "output": "release"
     },

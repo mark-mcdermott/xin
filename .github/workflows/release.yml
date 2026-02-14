@@ -26,9 +26,13 @@ jobs:
 
       - name: Build and package
         run: pnpm run package
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: release/*.dmg
           generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
