@@ -34,9 +34,8 @@ export class TagManager {
 
     this.tagIndex = {};
 
-    // Scan daily notes and regular notes
-    await this.scanDirectory(join(vaultPath, 'daily-notes'));
-    await this.scanDirectory(join(vaultPath, 'notes'));
+    // Scan all markdown files in the vault
+    await this.scanDirectory(vaultPath);
 
     this.lastIndexed = Date.now();
   }
