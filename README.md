@@ -3,7 +3,7 @@
 [![Tests](https://github.com/mark-mcdermott/xun/actions/workflows/test.yml/badge.svg)](https://github.com/mark-mcdermott/xun/actions/workflows/test.yml) 
 
 <div align="center">
-  <h1><img src="src/renderer/assets/pink-and-gray-mech-right.png" width="25" /> Xun</h1>
+  <h1><img src="src/renderer/assets/pink-and-gray-mech-right.png" width="35" /> Xun</h1>
   <p>A desktop mac app for note-taking and publishing blog posts</p>
 </div>
 
