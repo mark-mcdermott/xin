@@ -42,6 +42,8 @@ coverage/
 playwright-report/
 test-results/
 tests/e2e/screenshots/
+tests/demos/recordings/*.webm
+tests/demos/recordings/*.mp4
 
 # Misc
 .cache/
