@@ -10,7 +10,7 @@ interface Preferences {
 }
 
 const DEFAULT_PREFERENCES: Preferences = {
-  theme: 'system'
+  theme: 'dark'
 };
 
 class ThemeManager {
