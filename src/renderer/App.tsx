@@ -55,7 +55,7 @@ import logoRightFacing from './assets/pink-and-gray-mech-right.png';
 import { mechSayings } from './data/mechSayings';
 import { useToast } from './components/Toast';
 
-type SidebarTab = 'files' | 'tags' | 'daily' | 'docs';
+type SidebarTab = 'files' | 'tags' | 'daily' | 'docs' | 'merch' | 'settings';
 type EditorViewMode = 'markdown' | 'editor' | 'split' | 'preview';
 type Tab =
   | { type: 'file'; path: string; content: string }
@@ -233,6 +233,12 @@ const App: React.FC = () => {
   const selectedFile = activeFileTab?.path ?? null;
   const fileContent = activeFileTab?.content ?? '';
   const selectedTag = activeTagTab?.tag ?? null;
+  const isTodayNoteActive = (() => {
+    if (!selectedFile?.includes('daily-notes/')) return false;
+    const now = new Date();
+    const todayStr = `${String(now.getFullYear()).slice(-2)}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return selectedFile.endsWith(`${todayStr}.md`);
+  })();
 
   // Navigation history helpers
   const pushToHistory = useCallback((entry: HistoryEntry) => {
@@ -839,11 +845,14 @@ const App: React.FC = () => {
     setActivePanel('file');
     if (tab) {
       if (tab.type === 'file') {
+        setSidebarTab(tab.path.includes('daily-notes/') ? 'daily' : 'files');
         pushToHistory({ type: 'file', path: tab.path });
       } else if (tab.type === 'tag') {
+        setSidebarTab('tags');
         pushToHistory({ type: 'tag', tag: tab.tag });
+      } else if (tab.type === 'remote-file') {
+        setSidebarTab('files');
       }
-      // Don't add remote files to navigation history for now
     }
   };
 
@@ -932,6 +941,7 @@ const App: React.FC = () => {
         setActiveTabIndex(openTabs.length);
       }
       setActivePanel('file');
+      setSidebarTab('daily');
       pushToHistory({ type: 'file', path });
 
       // Refresh file tree and daily note dates in case a new one was created
@@ -1699,10 +1709,10 @@ const App: React.FC = () => {
                       marginBottom: isActive ? '-1px' : '0'
                     }}
                   >
-                    <span className="truncate hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: isActive ? 'var(--tab-active-text)' : 'var(--tab-inactive-text)' }}>{tabLabel}</span>
+                    <span className="truncate hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: isActive ? 'var(--accent-primary)' : 'var(--tab-inactive-text)' }}>{tabLabel}</span>
                     <button
                       className="p-0.5 rounded transition-all flex items-center justify-center hover:bg-[var(--tab-close-hover)] hover:opacity-60"
-                      style={{ color: isActive ? 'var(--tab-active-text)' : 'var(--tab-inactive-text)', backgroundColor: 'transparent' }}
+                      style={{ color: isActive ? 'var(--accent-primary)' : 'var(--tab-inactive-text)', backgroundColor: 'transparent' }}
                       title="Close tab"
                       onClick={(e) => handleCloseTab(index, e)}
                     >
@@ -1728,15 +1738,15 @@ const App: React.FC = () => {
                     borderTopRightRadius: '8px',
                     marginBottom: activePanel !== 'settings' ? '0' : '-1px'
                   }}
-                  onClick={() => setActivePanel('settings')}
+                  onClick={() => { setActivePanel('settings'); setSidebarTab('settings'); }}
                 >
-                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: activePanel !== 'settings' ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)' }}>
+                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: activePanel !== 'settings' ? 'var(--tab-inactive-text)' : 'var(--accent-primary)' }}>
                     <Settings size={14} strokeWidth={1.5} style={{ marginRight: '5px' }} />
                     Settings
                   </span>
                   <button
                     className="p-0.5 rounded transition-all flex items-center justify-center hover:bg-[var(--tab-close-hover)] hover:opacity-60"
-                    style={{ color: activePanel !== 'settings' ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)', backgroundColor: 'transparent' }}
+                    style={{ color: activePanel !== 'settings' ? 'var(--tab-inactive-text)' : 'var(--accent-primary)', backgroundColor: 'transparent' }}
                     title="Close settings"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1765,15 +1775,15 @@ const App: React.FC = () => {
                     borderTopRightRadius: '8px',
                     marginBottom: activePanel !== 'docs' ? '0' : '-1px'
                   }}
-                  onClick={() => setActivePanel('docs')}
+                  onClick={() => { setActivePanel('docs'); setSidebarTab('docs'); }}
                 >
-                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: activePanel !== 'docs' ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)' }}>
+                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: activePanel !== 'docs' ? 'var(--tab-inactive-text)' : 'var(--accent-primary)' }}>
                     <BookOpen size={14} strokeWidth={1.5} style={{ marginRight: '5px' }} />
                     Docs
                   </span>
                   <button
                     className="p-0.5 rounded transition-all flex items-center justify-center hover:bg-[var(--tab-close-hover)] hover:opacity-60"
-                    style={{ color: activePanel !== 'docs' ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)', backgroundColor: 'transparent' }}
+                    style={{ color: activePanel !== 'docs' ? 'var(--tab-inactive-text)' : 'var(--accent-primary)', backgroundColor: 'transparent' }}
                     title="Close docs"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1802,15 +1812,15 @@ const App: React.FC = () => {
                     borderTopRightRadius: '8px',
                     marginBottom: activePanel !== 'merch' ? '0' : '-1px'
                   }}
-                  onClick={() => setActivePanel('merch')}
+                  onClick={() => { setActivePanel('merch'); setSidebarTab('merch'); }}
                 >
-                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: activePanel !== 'merch' ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)' }}>
+                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: activePanel !== 'merch' ? 'var(--tab-inactive-text)' : 'var(--accent-primary)' }}>
                     <ShoppingCart size={14} strokeWidth={1.5} style={{ marginRight: '5px' }} />
                     Merch
                   </span>
                   <button
                     className="p-0.5 rounded transition-all flex items-center justify-center hover:bg-[var(--tab-close-hover)] hover:opacity-60"
-                    style={{ color: activePanel !== 'merch' ? 'var(--tab-inactive-text)' : 'var(--tab-active-text)', backgroundColor: 'transparent' }}
+                    style={{ color: activePanel !== 'merch' ? 'var(--tab-inactive-text)' : 'var(--accent-primary)', backgroundColor: 'transparent' }}
                     title="Close merch"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1850,31 +1860,31 @@ const App: React.FC = () => {
             <Calendar size={20} strokeWidth={1.5} />
           </button> */}
           <Tooltip label="Daily Notes">
-            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={handleOpenTodayNote}>
+            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: sidebarTab === 'daily' ? 'var(--accent-primary)' : 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={handleOpenTodayNote}>
               <FileText size={20} strokeWidth={1.5} />
             </button>
           </Tooltip>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
           <Tooltip label="Files">
-            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={() => setSidebarTab('files')}>
+            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: sidebarTab === 'files' ? 'var(--accent-primary)' : 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={() => { setSidebarTab('files'); setActivePanel('file'); }}>
               <FolderTree size={20} strokeWidth={1.5} />
             </button>
           </Tooltip>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
           <Tooltip label="Tags">
-            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={() => setSidebarTab('tags')}>
+            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: sidebarTab === 'tags' ? 'var(--accent-primary)' : 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={() => { setSidebarTab('tags'); setActivePanel('file'); }}>
               <Code size={20} strokeWidth={1.5} />
             </button>
           </Tooltip>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
           <Tooltip label="Documentation">
-            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={() => { setShowDocs(true); setSidebarTab('docs'); setActivePanel('docs'); }}>
+            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: sidebarTab === 'docs' ? 'var(--accent-primary)' : 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={() => { setShowDocs(true); setSidebarTab('docs'); setActivePanel('docs'); }}>
               <BookOpen size={20} strokeWidth={1.5} />
             </button>
           </Tooltip>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
           <Tooltip label="Store">
-            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all relative" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={() => { setShowMerch(true); setStoreView('index'); setActivePanel('merch'); }}>
+            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all relative" style={{ color: sidebarTab === 'merch' ? 'var(--accent-primary)' : 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={() => { setShowMerch(true); setSidebarTab('merch'); setStoreView('index'); setActivePanel('merch'); }}>
             <ShoppingCart size={19} strokeWidth={1.5} />
             {!showMerch && sidebarCartCount > 0 && (
               <span
@@ -1943,13 +1953,7 @@ const App: React.FC = () => {
 
           {/* Sidebar content */}
           <div className="flex-1 overflow-y-auto" style={{ paddingLeft: '13px' }}>
-            {sidebarTab === 'daily' ? (
-              <DailyNotesNav
-                onDateSelect={handleDateSelect}
-                currentDate={selectedFile?.includes('daily-notes/') ? selectedFile.split('/').pop()?.replace('.md', '') : null}
-                existingDates={dailyNoteDates}
-              />
-            ) : sidebarTab === 'files' ? (
+            {sidebarTab === 'files' || sidebarTab === 'daily' || sidebarTab === 'merch' || sidebarTab === 'settings' ? (
               <FileTree
                 tree={fileTree}
                 remoteFolders={remoteFolders}

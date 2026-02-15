@@ -535,12 +535,12 @@ function parseInlineElements(text: string, lineFrom: number): MarkdownElement[] 
 }
 
 function parseHeaderElement(text: string, lineFrom: number): HeaderElement | null {
-  // Complete header: # followed by space (standard markdown header)
-  const completeMatch = text.match(/^(#{1,6})\s+/);
+  // Complete header: optional leading spaces, then # followed by space
+  const completeMatch = text.match(/^(\s*)(#{1,6})\s+/);
   if (completeMatch) {
     return {
       type: 'header',
-      level: completeMatch[1].length,
+      level: completeMatch[2].length,
       from: lineFrom,
       to: lineFrom + text.length,
       markerFrom: lineFrom,
