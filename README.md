@@ -45,7 +45,7 @@ If you wear clothes or know someone who does, please buy a comfy Xin hoodie in t
 Xin has detailed in-app documentation. Click the book icon in the left sidebar.
 
 ### Roadmap
-I'll start work on the `rebuild` branch soon, redoing Xin from scratch without Claude just to learn more.
+I'll be rebuilding Xin from scratch on the `rebuild` branch without Claude, just to learn more and have a cleaner, more logical and more secure codebase.
 Possible other future plans:
 - adaptors for publishing to blog platforms besides Cloudflare Pages (only if other people need them--I don't)
 - Xin web and mobile apps with cross-platform content sync
