@@ -119,8 +119,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch, onBlo
         token: ''
       },
       content: {
-        path: 'src/content/posts/',
-        livePostPath: '/posts/',
+        path: 'src/content/blog/',
+        livePostPath: '/blog/',
         format: 'single-file',
         filename: '{tag}.md'
       }
