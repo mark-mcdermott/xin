@@ -50,7 +50,6 @@ import { useCart } from './stores/cart';
 import { CreateFileDialog } from './components/CreateFileDialog';
 import { VaultSelectionDialog } from './components/VaultSelectionDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
-import logoLeftFacing from './assets/pink-and-gray-mech-left.png';
 import logoRightFacing from './assets/pink-and-gray-mech-right.png';
 import { mechSayings } from './data/mechSayings';
 
