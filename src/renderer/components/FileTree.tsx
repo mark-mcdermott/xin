@@ -26,6 +26,7 @@ interface FileTreeNodeProps {
   onRenameCancel?: () => void;
   expandedPaths?: Set<string>; // Controlled expansion state
   onFolderToggle?: (path: string, expanded: boolean) => void;
+  selectedFile?: string | null;
 }
 
 const FileTreeNode: React.FC<FileTreeNodeProps> = ({
@@ -51,9 +52,11 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
   onRenameRemoteSubmit,
   onRenameCancel,
   expandedPaths,
-  onFolderToggle
+  onFolderToggle,
+  selectedFile
 }) => {
   const isRemote = node.source === 'remote';
+  const isActive = node.type === 'file' && selectedFile === node.path;
   // Use controlled expansion if expandedPaths is provided, otherwise use local state
   // Default to collapsed on initial load
   const [localExpanded, setLocalExpanded] = useState(false);
@@ -260,7 +263,10 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
                 style={{ color: 'var(--sidebar-icon-muted)', marginRight: '6px' }}
               />
             )}
-            <span className="truncate" style={{ color: isRemote && node.type === 'folder' ? 'var(--accent-primary)' : undefined }}>
+            <span className="truncate" style={{
+              color: isActive ? 'var(--accent-primary)' : isRemote && node.type === 'folder' ? 'var(--accent-primary)' : undefined,
+              fontWeight: isActive ? 600 : undefined
+            }}>
               {node.name.replace('.md', '')}
             </span>
             {/* Rocket icon for remote files */}
@@ -322,6 +328,7 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
                   onRenameCancel={onRenameCancel}
                   expandedPaths={expandedPaths}
                   onFolderToggle={onFolderToggle}
+                  selectedFile={selectedFile}
                 />
               );
             });
@@ -556,6 +563,7 @@ interface FileTreeComponentProps {
   onSidebarContextMenu?: () => void;
   expandedPaths?: Set<string>;
   onFolderToggle?: (path: string, expanded: boolean) => void;
+  selectedFile?: string | null;
 }
 
 export const FileTree: React.FC<FileTreeComponentProps> = ({
@@ -578,7 +586,8 @@ export const FileTree: React.FC<FileTreeComponentProps> = ({
   onCreateInFolder,
   onSidebarContextMenu,
   expandedPaths,
-  onFolderToggle
+  onFolderToggle,
+  selectedFile
 }) => {
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
@@ -676,6 +685,7 @@ export const FileTree: React.FC<FileTreeComponentProps> = ({
               onRenameCancel={handleRenameCancel}
               expandedPaths={expandedPaths}
               onFolderToggle={onFolderToggle}
+              selectedFile={selectedFile}
             />
           ))}
           {/* Separator between remote and local files */}
@@ -721,6 +731,7 @@ export const FileTree: React.FC<FileTreeComponentProps> = ({
               onRenameCancel={handleRenameCancel}
               expandedPaths={expandedPaths}
               onFolderToggle={onFolderToggle}
+              selectedFile={selectedFile}
             />
           );
         });

@@ -1983,6 +1983,7 @@ const App: React.FC = () => {
                 }}
                 expandedPaths={expandedPaths.size > 0 ? expandedPaths : undefined}
                 onFolderToggle={handleFolderToggle}
+                selectedFile={selectedFile}
               />
             ) : sidebarTab === 'docs' ? (
               <DocsTreeNav

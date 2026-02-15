@@ -1434,22 +1434,36 @@ function createDecorations(
     // Parse list elements
     const listEl = parseListElement(lineText, line.from);
     if (listEl) {
-      // Replace the marker with nothing - Decoration.replace handles cursor positioning properly
+      // Replace indent whitespace + marker with nothing — CSS padding recreates the indent
       decorations.push(
-        Decoration.replace({}).range(listEl.markerFrom, listEl.markerTo)
+        Decoration.replace({}).range(line.from, listEl.markerTo)
       );
-      // Add bullet/number via line decoration
+      // Add bullet/number via line decoration with padding for indent level
+      const indentLevel = Math.floor(listEl.indent / 4);
+      const paddingLeft = indentLevel > 0 ? `${indentLevel * 2}em` : undefined;
       if (listEl.listType === 'ul') {
         decorations.push(
-          Decoration.line({ class: 'cm-list-bullet', attributes: { 'data-indent': String(listEl.indent) } }).range(line.from)
+          Decoration.line({
+            class: 'cm-list-bullet',
+            attributes: {
+              'data-indent': String(listEl.indent),
+              ...(paddingLeft ? { style: `padding-left: ${paddingLeft}` } : {})
+            }
+          }).range(line.from)
         );
       } else if (listEl.listType === 'ol') {
         decorations.push(
-          Decoration.line({ class: 'cm-list-number' }).range(line.from)
+          Decoration.line({
+            class: 'cm-list-number',
+            attributes: paddingLeft ? { style: `padding-left: ${paddingLeft}` } : {}
+          }).range(line.from)
         );
       } else if (listEl.listType === 'task') {
         decorations.push(
-          Decoration.line({ class: listEl.checked ? 'cm-list-task-checked' : 'cm-list-task-unchecked' }).range(line.from)
+          Decoration.line({
+            class: listEl.checked ? 'cm-list-task-checked' : 'cm-list-task-unchecked',
+            attributes: paddingLeft ? { style: `padding-left: ${paddingLeft}` } : {}
+          }).range(line.from)
         );
       }
     }
@@ -1984,12 +1998,36 @@ const editorTheme = EditorView.theme({
     lineHeight: '1.4'
   },
 
-  // List styles
+  // List styles — level 0: filled circle
   '.cm-list-bullet::before': {
-    content: '"⏺"',
+    content: '""',
+    display: 'inline-block',
+    width: '7px',
+    height: '7px',
+    borderRadius: '50%',
+    backgroundColor: 'currentColor',
     marginRight: '0.5em',
-    color: 'inherit',
+    verticalAlign: 'middle',
+    position: 'relative',
+    top: '-1px',
     pointerEvents: 'none'
+  },
+  // Level 1: hollow circle (same outer size via border-box)
+  '.cm-list-bullet[data-indent="4"]::before, .cm-list-bullet[data-indent="5"]::before, .cm-list-bullet[data-indent="6"]::before, .cm-list-bullet[data-indent="7"]::before': {
+    backgroundColor: 'transparent',
+    border: '1.5px solid currentColor',
+    boxSizing: 'border-box',
+  },
+  // Level 2: filled square
+  '.cm-list-bullet[data-indent="8"]::before, .cm-list-bullet[data-indent="9"]::before, .cm-list-bullet[data-indent="10"]::before, .cm-list-bullet[data-indent="11"]::before': {
+    borderRadius: '1px',
+  },
+  // Level 3: hollow square
+  '.cm-list-bullet[data-indent="12"]::before, .cm-list-bullet[data-indent="13"]::before, .cm-list-bullet[data-indent="14"]::before, .cm-list-bullet[data-indent="15"]::before': {
+    borderRadius: '1px',
+    backgroundColor: 'transparent',
+    border: '1.5px solid currentColor',
+    boxSizing: 'border-box',
   },
   '.cm-list-number': {
     // Numbers handled by content
@@ -2606,6 +2644,17 @@ tags: [""]
           }
 
           if (!isInsideBlogBlock(doc, pos)) {
+            // If on a list line, indent the whole line instead of inserting spaces
+            const currentLine = doc.lineAt(pos);
+            const listCheck = currentLine.text.match(/^(\s*)([-*+])\s+(\[([ xX])\]\s+)?/) ||
+                              currentLine.text.match(/^(\s*)(\d+)\.\s+/);
+            if (listCheck) {
+              view.dispatch({
+                changes: { from: currentLine.from, insert: '    ' },
+                selection: { anchor: pos + 4 }
+              });
+              return true;
+            }
             // Default: insert tab (2 spaces)
             view.dispatch(view.state.replaceSelection('  '));
             return true;
@@ -2661,6 +2710,27 @@ tags: [""]
 
           return false;
         }
+      },
+      {
+        key: 'Shift-Tab',
+        run: (view) => {
+          const pos = view.state.selection.main.head;
+          const line = view.state.doc.lineAt(pos);
+          const listCheck = line.text.match(/^(\s+)([-*+])\s+(\[([ xX])\]\s+)?/) ||
+                            line.text.match(/^(\s+)(\d+)\.\s+/);
+          if (listCheck) {
+            const indent = listCheck[1].length;
+            const remove = Math.min(4, indent);
+            if (remove > 0) {
+              view.dispatch({
+                changes: { from: line.from, to: line.from + remove },
+                selection: { anchor: pos - remove }
+              });
+              return true;
+            }
+          }
+          return false;
+        }
       }
     ]);
 
@@ -2676,18 +2746,19 @@ tags: [""]
           const ulMatch = lineText.match(/^(\s*)([-*+])\s+$/);
           const olMatch = lineText.match(/^(\s*)(\d+)\.\s+$/);
           const taskMatch = lineText.match(/^(\s*)([-*+])\s+\[([ xX])\]\s+$/);
-          if (taskMatch && pos === line.to) {
-            // Delete entire task marker
-            view.dispatch({ changes: { from: line.from, to: line.to } });
-            return true;
-          }
-          if (ulMatch && pos === line.to) {
-            // Delete entire ul marker
-            view.dispatch({ changes: { from: line.from, to: line.to } });
-            return true;
-          }
-          if (olMatch && pos === line.to) {
-            // Delete entire ol marker
+          const emptyMatch = taskMatch || ulMatch || olMatch;
+          if (emptyMatch && pos === line.to) {
+            const indent = emptyMatch[1].length;
+            if (indent >= 4) {
+              // Dedent instead of deleting entirely
+              const remove = Math.min(4, indent);
+              view.dispatch({
+                changes: { from: line.from, to: line.from + remove },
+                selection: { anchor: line.to - remove }
+              });
+              return true;
+            }
+            // No indent left — delete entire marker
             view.dispatch({ changes: { from: line.from, to: line.to } });
             return true;
           }
