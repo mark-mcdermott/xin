@@ -1,4 +1,4 @@
-[![Tests](https://github.com/mark-mcdermott/xin/actions/workflows/test.yml/badge.svg)](https://github.com/mark-mcdermott/xin/actions/workflows/test.yml)
+[![Tests](https://github.com/mark-mcdermott/xin/actions/workflows/test.yml/badge.svg)](https://github.com/mark-mcdermott/xin/actions/workflows/test.yml) 
 
 <div align="center">
   <img src="src/renderer/assets/pink-and-gray-mech-right.png" width="50" />
