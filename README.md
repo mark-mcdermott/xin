@@ -32,13 +32,13 @@
 
 ## About
 
-### Why I Built Xun
+### Motivation
 I used to write notes, both personal and work related, in Obsidian. I write everything each day in one daily note, but I need to be able to easily delete an entire tag's content throughout the whole app without losing the rest of the daily notes. I also need a desktop CMS that has one-click publishing with a progress bar. Obsidian sort of did some of this, but not by default and not gracefully. So I built Xun.
 
-### Pure Vibes
+### Vibe Coded
 I vibe coded the Xun MVP in Claude over two weeks of evenings and weekends. Over the next month I used Claude and added more features, refined micro-interactions, etc. The process taught me a lot about TypeScript, Electron, CodeMirror and coding for e-commerce.
 
-### Support The Project
+### Support
 If you wear clothes or know someone who does, please buy a comfy Xun hoodie in the in-app store (click the cart icon in the left sidebar). Or buy me a coffee in-app or file a bug report (click the gear icon towards the bottom). Starring this repo also helps, as would contributing any code for bugfixes or new features.
 
 ### Documentation
@@ -53,4 +53,4 @@ Possible other future plans:
 - a spinoff featuring Pedro Pascal
 
 ### License
-[MIT](https://opensource.org/license/mit), see included `LICENSE.md`
+[MIT](LICENSE)
