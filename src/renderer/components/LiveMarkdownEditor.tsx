@@ -698,7 +698,8 @@ class BlogBlockHeaderWidget extends WidgetType {
 
     const label = document.createElement('span');
     label.textContent = 'blog post';
-    label.style.cssText = 'font-size: 1.75em; font-weight: 700; color: #3f0c8d; line-height: 1;';
+    label.className = 'cm-publish-color';
+    label.style.cssText = 'font-size: 1.75em; font-weight: 700; line-height: 1;';
     wrapper.appendChild(label);
 
     if (this.hasPublish) {
@@ -719,7 +720,8 @@ class BlogBlockHeaderWidget extends WidgetType {
           // Switch to rocket icon for republishing
           iconBtn.innerHTML = ROCKET_ICON_SVG;
           iconBtn.title = 'Republish this blog post';
-          iconBtn.style.color = '#3f0c8d';
+          iconBtn.className = 'cm-blog-publish-btn cm-publish-color';
+          iconBtn.style.color = '';
           // Now clicking again will publish
           iconBtn.onclick = (e2) => {
             e2.preventDefault();
@@ -732,7 +734,8 @@ class BlogBlockHeaderWidget extends WidgetType {
       } else {
         iconBtn.innerHTML = ROCKET_ICON_SVG;
         iconBtn.title = 'Publish this blog post';
-        iconBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: flex; align-items: center; color: #3f0c8d;';
+        iconBtn.className = 'cm-blog-publish-btn cm-publish-color';
+        iconBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: flex; align-items: center;';
         iconBtn.onmouseenter = () => { iconBtn.style.backgroundColor = '#f0f0f0'; };
         iconBtn.onmouseleave = () => { iconBtn.style.backgroundColor = 'transparent'; };
 
@@ -788,7 +791,8 @@ class AtPostRocketWidget extends WidgetType {
         e.stopPropagation();
         iconBtn.innerHTML = ROCKET_ICON_SVG;
         iconBtn.title = 'Republish this blog post';
-        iconBtn.style.color = '#3f0c8d';
+        iconBtn.className = 'cm-at-publish-btn cm-publish-color';
+        iconBtn.style.color = '';
         iconBtn.onclick = (e2) => {
           e2.preventDefault();
           e2.stopPropagation();
@@ -800,7 +804,8 @@ class AtPostRocketWidget extends WidgetType {
     } else {
       iconBtn.innerHTML = ROCKET_ICON_SVG;
       iconBtn.title = 'Publish this blog post';
-      iconBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: inline-flex; align-items: center; color: #3f0c8d; vertical-align: middle;';
+      iconBtn.className = 'cm-at-publish-btn cm-publish-color';
+      iconBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: inline-flex; align-items: center; vertical-align: middle;';
       iconBtn.onmouseenter = () => { iconBtn.style.backgroundColor = '#f0f0f0'; };
       iconBtn.onmouseleave = () => { iconBtn.style.backgroundColor = 'transparent'; };
 
@@ -837,7 +842,8 @@ class RemoteFrontmatterRocketWidget extends WidgetType {
     const iconBtn = document.createElement('button');
     iconBtn.innerHTML = ROCKET_ICON_SVG;
     iconBtn.title = 'Publish changes to remote';
-    iconBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: inline-flex; align-items: center; color: #3f0c8d; vertical-align: middle;';
+    iconBtn.className = 'cm-publish-color';
+    iconBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: inline-flex; align-items: center; vertical-align: middle;';
     iconBtn.onmouseenter = () => { iconBtn.style.backgroundColor = '#f0f0f0'; };
     iconBtn.onmouseleave = () => { iconBtn.style.backgroundColor = 'transparent'; };
 
@@ -874,7 +880,8 @@ class AtPostHeaderWidget extends WidgetType {
 
     const label = document.createElement('span');
     label.textContent = 'blog post';
-    label.style.cssText = 'font-size: 1.75em; font-weight: 700; color: #3f0c8d; line-height: 1;';
+    label.className = 'cm-publish-color';
+    label.style.cssText = 'font-size: 1.75em; font-weight: 700; line-height: 1;';
     wrapper.appendChild(label);
 
     if (this.hasPublish) {
@@ -895,7 +902,8 @@ class AtPostHeaderWidget extends WidgetType {
           e.stopPropagation();
           iconBtn.innerHTML = ROCKET_ICON_SVG;
           iconBtn.title = 'Republish this blog post';
-          iconBtn.style.color = '#3f0c8d';
+          iconBtn.className = 'cm-at-publish-btn cm-publish-color';
+          iconBtn.style.color = '';
           iconBtn.onclick = (e2) => {
             e2.preventDefault();
             e2.stopPropagation();
@@ -907,7 +915,8 @@ class AtPostHeaderWidget extends WidgetType {
       } else {
         iconBtn.innerHTML = ROCKET_ICON_SVG;
         iconBtn.title = 'Publish this blog post';
-        iconBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: flex; align-items: center; color: #3f0c8d;';
+        iconBtn.className = 'cm-at-publish-btn cm-publish-color';
+        iconBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: background-color 0.15s; display: flex; align-items: center;';
         iconBtn.onmouseenter = () => { iconBtn.style.backgroundColor = '#f0f0f0'; };
         iconBtn.onmouseleave = () => { iconBtn.style.backgroundColor = 'transparent'; };
 
@@ -2021,6 +2030,11 @@ const editorTheme = EditorView.theme({
     backgroundColor: '#d1d5db',
     verticalAlign: 'middle',
     fontSize: '14px'
+  },
+
+  // Publish icon & label color (rocket + "blog post" title)
+  '.cm-publish-color': {
+    color: 'var(--editor-link)'
   },
 
   // @ post styles
