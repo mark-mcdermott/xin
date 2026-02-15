@@ -8,7 +8,7 @@
 ## Features
 
 ### Note-taking Features
-- your notes that are saved to `.md` files on your computer
+- your notes are saved to `.md` files on your computer
 - `#tags`: categorize notes by topic/status
 - `[[internal links]]`: Clicked internal links go to a note of that title and create it if it doesn't exist
 - markdown: `# headers`, `[external links](https://url.com)`, `**bold**`, `*italic*`, `- bullet lists`, etc should all work as expected
