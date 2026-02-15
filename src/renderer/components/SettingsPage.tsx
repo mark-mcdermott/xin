@@ -59,7 +59,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch, onBlo
   const [syncingBlogId, setSyncingBlogId] = useState<string | null>(null);
 
   // Theme state
-  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>('dark');
 
   // Tooltips state
   const [showTooltips, setShowTooltips] = useState(() => localStorage.getItem('showTooltips') !== 'false');
