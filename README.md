@@ -24,11 +24,19 @@
 - import and sync all your blog's posts for full CMS edit and delete post functionality
 
 ## Quick Start
-1. Download the latest `.dmg` under Releases in the right sidebar of the GitHub repo
-2. Open the `.dmg` file
-3. Drag Xin into your Applications folder
-4. Open Xin from Applications
-5. On first launch, macOS may block it — go to System Settings → Privacy & Security and click "Open Anyway"
+1. Clone the repo and install dependencies:
+   ```bash
+   git clone https://github.com/mark-mcdermott/xin.git
+   cd xin
+   pnpm install
+   ```
+2. Build the app:
+   ```bash
+   pnpm run package
+   ```
+3. Open the generated `.dmg` from the `release/` folder
+4. Drag Xin into your Applications folder
+5. Open Xin from Applications
 
 ## About
 
