@@ -4,7 +4,7 @@
 
 <div align="center">
   <img src="src/renderer/assets/pink-and-gray-mech-right.png" width="50" />
-  <h1>Xin</h1>
+  <h1 style="margin-top:0;">Xin</h1>
   <p>A desktop mac app for note-taking and publishing blog posts</p>
 </div>
 
