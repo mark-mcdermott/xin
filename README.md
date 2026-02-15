@@ -1,10 +1,11 @@
+![100% vibe coded](https://img.shields.io/badge/100%25-vibe%20coded-db7758.svg?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNTYgMTI3Ij48cGF0aCBmaWxsPSIjZGI3NzU4IiBkPSJNOTcuOTUgOTEuNTlsLTM5Ljg4LS4wNHYyOC43N2wtMTMuMzIuMDctLjAyLTI4LjgtMTMuMjctLjAyLS4wMiAyOC44SDE4LjExdi01Ny42M2wtMTMuMjYtLjAzLS4wMi0yOC44MSAxMy4zMS0uMDYuMDgtMjguNzRoMTE5LjcxdjI4LjY4bDEzLjI2LjE1djI4LjgxbC0xMy4yNi4wNnY1Ny41NGwtMTMuMy4wMy0uMDItMjguOC0xMy4yOC0uMDN2MjguODFsLTEzLjMzLjAyLS4wMi0yOC44LS4wMi4wMlpNMzAuNTEgNTEuNTJsMTcuOTItNy40LS4xNy02LjE5LTE4LjA0LTcuMzQuMSA2LjI2IDEwLjc0IDQuMjYtMTAuNzUgMy44NS4xOSA2LjU3Wk0xMjUuNzQgNDUuMjdsLTEwLjk5LTMuOTYgMTEuMDUtNC4xLjA0LTYuMjYtMTcuNDggNy4zNS0uMTYgNi4yIDE3LjQgNy4zOWMuMTctMi4zLjI1LTQuMzkuMTMtNi42M1oiLz48L3N2Zz4%3D)
+
 [![Tests](https://github.com/mark-mcdermott/xin/actions/workflows/test.yml/badge.svg)](https://github.com/mark-mcdermott/xin/actions/workflows/test.yml) 
 
 <div align="center">
   <img src="src/renderer/assets/pink-and-gray-mech-right.png" width="50" />
   <h1>Xin</h1>
   <p>A desktop mac app for note-taking and publishing blog posts</p>
-  <p><em>Vibe coded--use at your own risk!!</em></p>
 </div>
 
 ## Features
