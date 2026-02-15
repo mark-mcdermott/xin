@@ -130,6 +130,8 @@ export interface ElectronAPI {
     subscribe: (jobId: string, callback: (data: any) => void) => Promise<VaultResponse>;
     unsubscribe: (jobId: string) => Promise<VaultResponse>;
     getAverageTime: () => Promise<VaultResponse<{ averageMs: number }>>;
+    onEnvSetupResult: (callback: (result: any) => void) => void;
+    removeEnvSetupListener: () => void;
   };
 
   // CMS operations (remote blog post management)
@@ -244,7 +246,13 @@ const api: ElectronAPI = {
       ipcRenderer.removeAllListeners(`publish:progress:${jobId}`);
       return ipcRenderer.invoke('publish:unsubscribe', jobId);
     },
-    getAverageTime: () => ipcRenderer.invoke('publish:get-average-time')
+    getAverageTime: () => ipcRenderer.invoke('publish:get-average-time'),
+    onEnvSetupResult: (callback: (result: any) => void) => {
+      ipcRenderer.on('env-setup:result', (_event, result) => callback(result));
+    },
+    removeEnvSetupListener: () => {
+      ipcRenderer.removeAllListeners('env-setup:result');
+    }
   },
 
   cms: {

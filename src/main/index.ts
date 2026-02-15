@@ -13,7 +13,8 @@ const getIconPath = (): string => {
 };
 import { registerVaultHandlers } from './ipc/vaultHandlers';
 import { registerTagHandlers, setTagManager } from './ipc/tagHandlers';
-import { registerPublishHandlers, initializePublishManagers, setPublishTagManager } from './ipc/publishHandlers';
+import { registerPublishHandlers, initializePublishManagers, setPublishTagManager, getConfigManager } from './ipc/publishHandlers';
+import { runEnvSetup, type EnvSetupResult } from './publish/EnvSetup';
 import { registerContextMenuHandlers } from './ipc/contextMenuHandlers';
 import { registerCmsHandlers, initializeCmsManagers, loadBlogsIntoCache, cleanupCms } from './ipc/cmsHandlers';
 import { vaultManager } from './vault/VaultManager';
@@ -112,6 +113,8 @@ app.whenReady().then(async () => {
   createApplicationMenu();
 
   // Initialize vault before creating window
+  let envSetupResult: EnvSetupResult | null = null;
+
   try {
     await vaultManager.initialize();
     console.log('Vault initialized at:', vaultManager.getVaultPath());
@@ -122,8 +125,22 @@ app.whenReady().then(async () => {
 
     // Initialize publish managers
     const vaultPath = vaultManager.getVaultPath();
+
     if (vaultPath) {
       initializePublishManagers(vaultPath);
+
+      // Auto-import blogs from .env before loading cache
+      const cm = getConfigManager();
+      if (cm) {
+        try {
+          envSetupResult = await runEnvSetup(vaultPath, cm);
+          if (envSetupResult.imported.length > 0) {
+            console.log('Env setup imported blogs:', envSetupResult.imported.map(b => b.name));
+          }
+        } catch (err) {
+          console.error('Env setup failed:', err);
+        }
+      }
 
       // Initialize CMS managers and load blogs into cache
       initializeCmsManagers(vaultPath);
@@ -134,6 +151,13 @@ app.whenReady().then(async () => {
   }
 
   createWindow();
+
+  // Notify renderer of env setup results after window finishes loading
+  if (envSetupResult && (envSetupResult.imported.length > 0 || envSetupResult.errors.length > 0)) {
+    mainWindow?.webContents.on('did-finish-load', () => {
+      mainWindow?.webContents.send('env-setup:result', envSetupResult);
+    });
+  }
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the
