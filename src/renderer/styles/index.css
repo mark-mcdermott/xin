@@ -7,6 +7,7 @@
    Using semantic/locational names for theming
    ============================================ */
 :root {
+  color-scheme: light;
   /* Base backgrounds */
   --bg-primary: #ffffff;
   --bg-secondary: #f6f6f6;
@@ -105,6 +106,10 @@
   --input-border: #e4e4e7;
   --input-border-focus: #e0246e;
   --input-text: #1a1a1a;
+
+  /* Feedback textarea */
+  --feedback-textarea-bg: #ffffff;
+  --feedback-textarea-text: #1a1a1a;
 
   /* Focus ring */
   --focus-ring: #e0246e;
@@ -251,6 +256,10 @@
   --input-border-focus: #e0246e;
   --input-text: #1a1a1a;
 
+  /* Feedback textarea */
+  --feedback-textarea-bg: #ffffff;
+  --feedback-textarea-text: #1a1a1a;
+
   /* Focus ring */
   --focus-ring: #e0246e;
   --focus-ring-accent: rgba(252, 50, 144, 0.1);
@@ -285,6 +294,7 @@
    ============================================ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
     /* Base backgrounds */
     --bg-primary: #1e1e1e;
     --bg-secondary: #252526;
@@ -384,6 +394,10 @@
     --input-border-focus: #fc3290;
     --input-text: #dcddde;
 
+    /* Feedback textarea */
+    --feedback-textarea-bg: #dcddde;
+    --feedback-textarea-text: #1a1a1a;
+
     /* Focus ring */
     --focus-ring: #fc3290;
     --focus-ring-accent: rgba(252, 50, 144, 0.2);
@@ -418,6 +432,7 @@
    CSS Variables - Dark Mode (explicit override)
    ============================================ */
 [data-theme="dark"] {
+  color-scheme: dark;
   /* Base backgrounds */
   --bg-primary: #1e1e1e;
   --bg-secondary: #252526;
@@ -516,6 +531,10 @@
   --input-border: #404040;
   --input-border-focus: #fc3290;
   --input-text: #dcddde;
+
+  /* Feedback textarea */
+  --feedback-textarea-bg: #dcddde;
+  --feedback-textarea-text: #1a1a1a;
 
   /* Focus ring */
   --focus-ring: #fc3290;
