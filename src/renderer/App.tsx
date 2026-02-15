@@ -53,6 +53,7 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import Tooltip from './components/Tooltip';
 import logoRightFacing from './assets/pink-and-gray-mech-right.png';
 import { mechSayings } from './data/mechSayings';
+import { useToast } from './components/Toast';
 
 type SidebarTab = 'files' | 'tags' | 'daily' | 'docs';
 type EditorViewMode = 'markdown' | 'editor' | 'split' | 'preview';
@@ -468,6 +469,9 @@ const App: React.FC = () => {
     }
   }, [vaultPath, getDailyNoteDates]);
 
+  // Toast notifications
+  const { showToast } = useToast();
+
   // Load blogs for editor autocomplete
   useEffect(() => {
     const loadBlogs = async () => {
@@ -482,6 +486,42 @@ const App: React.FC = () => {
     };
     loadBlogs();
   }, [vaultPath]);
+
+  // Listen for env-setup results from main process
+  useEffect(() => {
+    window.electronAPI.publish.onEnvSetupResult(async (result) => {
+      // Show success toasts for imported blogs
+      for (const blog of result.imported) {
+        showToast({
+          type: 'success',
+          title: 'Blog imported from .env',
+          message: blog.name,
+        });
+      }
+
+      // Show error toasts for failed blogs
+      for (const err of result.errors) {
+        showToast({
+          type: 'error',
+          title: `Blog ${err.blogNumber} import failed`,
+          message: err.messages.join(', '),
+        });
+      }
+
+      // Refresh blogs list and remote posts if any were imported
+      if (result.imported.length > 0) {
+        const blogsResult = await window.electronAPI.publish.getBlogs();
+        if (blogsResult.success && blogsResult.blogs) {
+          setBlogs(blogsResult.blogs);
+        }
+        refreshRemotePosts();
+      }
+    });
+
+    return () => {
+      window.electronAPI.publish.removeEnvSetupListener();
+    };
+  }, [showToast, refreshRemotePosts]);
 
   // Load vaults for vault switcher
   useEffect(() => {

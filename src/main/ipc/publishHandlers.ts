@@ -36,6 +36,13 @@ export function initializePublishManagers(vaultPath: string): void {
 }
 
 /**
+ * Get the ConfigManager instance (for use by other modules like EnvSetup)
+ */
+export function getConfigManager(): ConfigManager | null {
+  return configManager;
+}
+
+/**
  * Register all publish-related IPC handlers
  */
 export function registerPublishHandlers(): void {

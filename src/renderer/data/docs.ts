@@ -49,6 +49,7 @@ export const docsTree: DocSection[] = [
     children: [
       { id: 'blog-overview', title: 'Overview' },
       { id: 'setting-up-blog', title: 'Setting Up a Blog' },
+      { id: 'env-auto-setup', title: 'Auto-Setup from .env' },
       { id: 'writing-posts', title: 'Writing Blog Posts' },
       { id: 'publishing', title: 'Publishing' },
       { id: 'multiple-blogs', title: 'Multiple Blogs' },
@@ -636,7 +637,80 @@ Xun works with any static site generator that uses markdown files with YAML fron
 - **Project Name**: Your Cloudflare Pages project name
 - **API Token**: Cloudflare API token
 
-If configured, Xun will show deployment progress after publishing.`,
+If configured, Xun will show deployment progress after publishing.
+
+## Auto-Setup from .env
+
+You can also [auto-import blog configurations from a .env file](doc:env-auto-setup) in your vault root — useful when setting up a new machine or sharing a project.`,
+  },
+
+  'env-auto-setup': {
+    id: 'env-auto-setup',
+    title: 'Auto-Setup from .env',
+    content: `# Auto-Setup from .env
+
+Xun can automatically import blog configurations from a \`.env\` file in your vault root on app startup. This is useful when cloning a project or setting up a new machine.
+
+## How It Works
+
+1. On startup, Xun checks for a \`.env\` file in your vault root
+2. It reads any \`XUN_BLOG_<N>_*\` keys, grouped by blog number
+3. Each valid group is imported as a new blog configuration
+4. Blogs that already exist (matched by GitHub repo) are skipped
+5. A toast notification shows what was imported or if errors occurred
+
+## .env Location
+
+Place the \`.env\` file in the root of your vault folder (the same folder that contains \`.xun/\`).
+
+## Format
+
+Use numbered prefixes to define one or more blogs:
+
+\`\`\`
+XUN_BLOG_1_NAME=My Blog
+XUN_BLOG_1_GITHUB_REPO=username/blog-repo
+XUN_BLOG_1_GITHUB_BRANCH=main
+XUN_BLOG_1_GITHUB_TOKEN=ghp_your_token
+XUN_BLOG_1_CONTENT_PATH=src/content/posts/
+XUN_BLOG_1_CONTENT_FORMAT=single-file
+\`\`\`
+
+## Required Fields
+
+| Field | Description |
+|-------|-------------|
+| \`NAME\` | Display name for the blog |
+| \`GITHUB_REPO\` | Repository in \`username/repo\` format |
+| \`GITHUB_BRANCH\` | Branch name (usually \`main\`) |
+| \`GITHUB_TOKEN\` | GitHub Personal Access Token |
+| \`CONTENT_PATH\` | Path to posts in the repo |
+| \`CONTENT_FORMAT\` | \`single-file\` or \`multi-file\` |
+
+## Optional Fields
+
+| Field | Description |
+|-------|-------------|
+| \`SITE_URL\` | Blog's public URL |
+| \`CONTENT_FILENAME\` | Filename template (e.g., \`{slug}.md\`) |
+| \`CONTENT_LIVE_POST_PATH\` | URL path to posts (e.g., \`/posts/\`) |
+| \`CLOUDFLARE_ACCOUNT_ID\` | Cloudflare account ID |
+| \`CLOUDFLARE_PROJECT_NAME\` | Cloudflare Pages project name |
+| \`CLOUDFLARE_TOKEN\` | Cloudflare API token |
+
+## Duplicate Detection
+
+Xun matches blogs by GitHub repository. If a blog with the same repo already exists in your configuration, the .env entry is silently skipped. This makes the import idempotent — restarting the app won't create duplicates.
+
+## Error Handling
+
+- Each blog is validated independently — one invalid blog won't prevent others from importing
+- Missing required fields are reported per blog
+- Errors and successes are shown as toast notifications
+
+## Security Note
+
+The \`.env\` file is already included in Xun's \`.gitignore\`. Never commit \`.env\` files containing tokens to version control. See \`.env.example\` in the project root for a template you can copy.`,
   },
 
   'writing-posts': {
