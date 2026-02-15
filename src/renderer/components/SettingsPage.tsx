@@ -61,6 +61,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch, onBlo
   // Theme state
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>('system');
 
+  // Tooltips state
+  const [showTooltips, setShowTooltips] = useState(() => localStorage.getItem('showTooltips') !== 'false');
+
   useEffect(() => {
     loadBlogs();
     loadVaults();
@@ -800,6 +803,23 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch, onBlo
           </div>
         </div>
 
+        {/* Tooltips Section */}
+        <div style={{ marginBottom: '32px' }}>
+          <h2 className="font-semibold" style={{ fontSize: '16px', color: 'var(--text-primary)', marginBottom: '12px' }}>Tooltips</h2>
+          <label className="flex items-center" style={{ cursor: 'pointer', gap: '8px' }}>
+            <input
+              type="checkbox"
+              checked={showTooltips}
+              onChange={(e) => {
+                setShowTooltips(e.target.checked);
+                localStorage.setItem('showTooltips', String(e.target.checked));
+              }}
+              style={{ accentColor: 'var(--accent-primary)', cursor: 'pointer', width: '16px', height: '16px' }}
+            />
+            <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>Show tooltips</span>
+          </label>
+        </div>
+
         {/* Vaults Section */}
         <div style={{ marginBottom: '32px' }}>
           <div className="flex items-center justify-between" style={{ marginBottom: '12px' }}>
@@ -1066,7 +1086,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch, onBlo
                     fontSize: '14px',
                     borderRadius: '6px',
                     resize: 'vertical',
-                    marginBottom: '12px'
+                    marginBottom: '12px',
+                    backgroundColor: 'var(--feedback-textarea-bg)',
+                    color: 'var(--feedback-textarea-text)'
                   }}
                 />
                 <Button

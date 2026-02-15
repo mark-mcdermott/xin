@@ -50,6 +50,7 @@ import { useCart } from './stores/cart';
 import { CreateFileDialog } from './components/CreateFileDialog';
 import { VaultSelectionDialog } from './components/VaultSelectionDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import Tooltip from './components/Tooltip';
 import logoRightFacing from './assets/pink-and-gray-mech-right.png';
 import { mechSayings } from './data/mechSayings';
 
@@ -1622,9 +1623,11 @@ const App: React.FC = () => {
 
           {/* Collapse sidebar button */}
           <div className="flex items-center justify-end h-full flex-1">
-            <button className="h-full px-3 hover:bg-[var(--sidebar-hover)] hover:opacity-60 transition-all cursor-pointer" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginLeft: sidebarCollapsed ? '10px' : '0', WebkitAppRegion: 'no-drag' } as React.CSSProperties} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
-              {sidebarCollapsed ? <PanelLeftOpen size={22} strokeWidth={1.5} style={{ marginTop: '1px' }} /> : <PanelLeftClose size={20} strokeWidth={1.5} />}
-            </button>
+            <Tooltip label={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"} position="bottom">
+              <button className="h-full px-3 hover:bg-[var(--sidebar-hover)] hover:opacity-60 transition-all cursor-pointer" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginLeft: sidebarCollapsed ? '10px' : '0', WebkitAppRegion: 'no-drag' } as React.CSSProperties} onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
+                {sidebarCollapsed ? <PanelLeftOpen size={22} strokeWidth={1.5} style={{ marginTop: '1px' }} /> : <PanelLeftClose size={20} strokeWidth={1.5} />}
+              </button>
+            </Tooltip>
           </div>
         </div>
 
@@ -1780,14 +1783,15 @@ const App: React.FC = () => {
                 </div>
               )}
               {/* New tab button */}
-              <button
-                className="h-full transition-all flex items-center justify-center hover:bg-[var(--sidebar-hover)] hover:opacity-60"
-                style={{ color: 'var(--tab-inactive-text)', backgroundColor: 'transparent', paddingLeft: '12px', paddingRight: '8px' }}
-                title="New note"
-                onClick={handleQuickCreateFile}
-              >
-                <Plus size={18} strokeWidth={1.5} style={{ marginTop: '2px' }} />
-              </button>
+              <Tooltip label="New Note" position="bottom" className="h-full">
+                <button
+                  className="h-full transition-all flex items-center justify-center hover:bg-[var(--sidebar-hover)] hover:opacity-60"
+                  style={{ color: 'var(--tab-inactive-text)', backgroundColor: 'transparent', paddingLeft: '12px', paddingRight: '8px' }}
+                  onClick={handleQuickCreateFile}
+                >
+                  <Plus size={18} strokeWidth={1.5} style={{ marginTop: '2px' }} />
+                </button>
+              </Tooltip>
             </div>
           )}
         </div>
@@ -1805,23 +1809,32 @@ const App: React.FC = () => {
           {/* <button className="p-2 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginBottom: '8px' }} title="Daily Notes" onClick={() => setSidebarTab('daily')}>
             <Calendar size={20} strokeWidth={1.5} />
           </button> */}
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Today's Note" onClick={handleOpenTodayNote}>
-            <FileText size={20} strokeWidth={1.5} />
-          </button>
+          <Tooltip label="Daily Notes">
+            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={handleOpenTodayNote}>
+              <FileText size={20} strokeWidth={1.5} />
+            </button>
+          </Tooltip>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="File Tree" onClick={() => setSidebarTab('files')}>
-            <FolderTree size={20} strokeWidth={1.5} />
-          </button>
+          <Tooltip label="Files">
+            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={() => setSidebarTab('files')}>
+              <FolderTree size={20} strokeWidth={1.5} />
+            </button>
+          </Tooltip>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Tags" onClick={() => setSidebarTab('tags')}>
-            <Code size={20} strokeWidth={1.5} />
-          </button>
+          <Tooltip label="Tags">
+            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={() => setSidebarTab('tags')}>
+              <Code size={20} strokeWidth={1.5} />
+            </button>
+          </Tooltip>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Documentation" onClick={() => { setShowDocs(true); setSidebarTab('docs'); setActivePanel('docs'); }}>
-            <BookOpen size={20} strokeWidth={1.5} />
-          </button>
+          <Tooltip label="Documentation">
+            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={() => { setShowDocs(true); setSidebarTab('docs'); setActivePanel('docs'); }}>
+              <BookOpen size={20} strokeWidth={1.5} />
+            </button>
+          </Tooltip>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all relative" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Merch" onClick={() => { setShowMerch(true); setStoreView('index'); setActivePanel('merch'); }}>
+          <Tooltip label="Store">
+            <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all relative" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={() => { setShowMerch(true); setStoreView('index'); setActivePanel('merch'); }}>
             <ShoppingCart size={19} strokeWidth={1.5} />
             {!showMerch && sidebarCartCount > 0 && (
               <span
@@ -1845,18 +1858,20 @@ const App: React.FC = () => {
               </span>
             )}
           </button>
+          </Tooltip>
           {/* Settings gear at bottom when sidebar is collapsed */}
           {sidebarCollapsed && (
             <>
               <div style={{ flex: 1 }} />
-              <button
-                className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all"
-                style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginBottom: '10px', marginLeft: '1px' }}
-                title="Settings"
-                onClick={() => { setShowSettings(true); setActivePanel('settings'); }}
-              >
-                <Settings size={18} strokeWidth={1.5} />
-              </button>
+              <Tooltip label="Settings">
+                <button
+                  className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all"
+                  style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginBottom: '10px', marginLeft: '1px' }}
+                  onClick={() => { setShowSettings(true); setActivePanel('settings'); }}
+                >
+                  <Settings size={18} strokeWidth={1.5} />
+                </button>
+              </Tooltip>
             </>
           )}
         </div>
@@ -1873,12 +1888,16 @@ const App: React.FC = () => {
           {/* Sidebar toolbar */}
           <div className="h-9 flex items-center" style={{ backgroundColor: 'transparent', marginBottom: '16px', paddingLeft: '20px' }}>
             <div className="flex items-center gap-0.5">
-              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="New note" onClick={handleCreateFile}>
-                <FilePlus size={20} strokeWidth={1.5} />
-              </button>
-              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="New folder" onClick={handleCreateFolder}>
-                <FolderPlus size={20} strokeWidth={1.5} />
-              </button>
+              <Tooltip label="New Note" position="bottom">
+                <button className="p-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={handleCreateFile}>
+                  <FilePlus size={20} strokeWidth={1.5} />
+                </button>
+              </Tooltip>
+              <Tooltip label="New Folder" position="bottom">
+                <button className="p-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} onClick={handleCreateFolder}>
+                  <FolderPlus size={20} strokeWidth={1.5} />
+                </button>
+              </Tooltip>
             </div>
           </div>
 
@@ -2021,17 +2040,19 @@ const App: React.FC = () => {
           {/* Bottom vault selector and settings - all on one row */}
           <div className="px-2 flex items-center justify-between" style={{ borderTop: '1px solid var(--border-primary)', paddingTop: '10px', paddingBottom: '10px', position: 'relative', zIndex: 10 }}>
             <div ref={vaultMenuRef} className="relative">
-              <button
-                className="flex items-center px-2 py-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded text-xs transition-all"
-                style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', outline: 'none' }}
-                onClick={() => setVaultMenuOpen(!vaultMenuOpen)}
-              >
-                <div className="flex flex-col items-center" style={{ marginRight: '6px', marginLeft: '8px' }}>
-                  <ChevronUp size={12} strokeWidth={2} className="mb-[-4px]" />
-                  <ChevronDown size={12} strokeWidth={2} />
-                </div>
-                <span className="truncate text-left" style={{ fontWeight: 600 }}>{getVaultName()}</span>
-              </button>
+              <Tooltip label="Vault" position="top">
+                <button
+                  className="flex items-center px-2 py-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded text-xs transition-all"
+                  style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', outline: 'none' }}
+                  onClick={() => setVaultMenuOpen(!vaultMenuOpen)}
+                >
+                  <div className="flex flex-col items-center" style={{ marginRight: '6px', marginLeft: '8px' }}>
+                    <ChevronUp size={12} strokeWidth={2} className="mb-[-4px]" />
+                    <ChevronDown size={12} strokeWidth={2} />
+                  </div>
+                  <span className="truncate text-left" style={{ fontWeight: 600 }}>{getVaultName()}</span>
+                </button>
+              </Tooltip>
               {/* Vault switcher dropdown */}
               {vaultMenuOpen && allVaults.length > 0 && (
                 <div
@@ -2107,9 +2128,11 @@ const App: React.FC = () => {
               {/* <button className="p-1.5 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Help">
                 <HelpCircle size={16} strokeWidth={1.5} />
               </button> */}
-              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginRight: '8px', outline: 'none' }} title="Settings" onClick={() => { setShowSettings(true); setActivePanel('settings'); }}>
-                <Settings size={18} strokeWidth={1.5} />
-              </button>
+              <Tooltip label="Settings" position="top">
+                <button className="p-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginRight: '8px', outline: 'none' }} onClick={() => { setShowSettings(true); setActivePanel('settings'); }}>
+                  <Settings size={18} strokeWidth={1.5} />
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>
