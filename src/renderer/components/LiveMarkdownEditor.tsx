@@ -2204,6 +2204,8 @@ interface LiveMarkdownEditorProps {
   contentPadding?: string; // CSS padding value, defaults to '40px 48px 24px 48px'
   isRemote?: boolean; // Whether this is a remote CMS file
   onPublishRemote?: () => void; // Callback to publish remote file changes
+  onTitleChange?: (title: string) => void; // Callback for instant title updates on keystroke
+  isDailyNote?: boolean; // Whether this is a daily note (title line is read-only)
 }
 
 // Helper to check if a position is inside a === blog block
@@ -2277,7 +2279,9 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   onPublishBlogBlock,
   contentPadding = '40px 48px 24px 48px',
   isRemote = false,
-  onPublishRemote
+  onPublishRemote,
+  onTitleChange,
+  isDailyNote = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -2300,6 +2304,9 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
 
   const onPublishRemoteRef = useRef(onPublishRemote);
   onPublishRemoteRef.current = onPublishRemote;
+
+  const onTitleChangeRef = useRef(onTitleChange);
+  onTitleChangeRef.current = onTitleChange;
 
   // Create padding override theme if custom padding is provided
   const paddingTheme = useMemo(() => {
@@ -2911,6 +2918,12 @@ tags: [""]
 
     const updateListener = EditorView.updateListener.of(update => {
       if (update.docChanged) {
+        // Instant title extraction for live UI updates
+        const firstLine = update.state.doc.line(1).text;
+        const titleMatch = firstLine.match(/^#\s+(.+)/);
+        const title = titleMatch ? titleMatch[1].trim() : firstLine.trim();
+        onTitleChangeRef.current?.(title);
+
         scheduleSave();
 
         const doc = update.state.doc;
@@ -3015,9 +3028,21 @@ tags: [""]
       }
     });
 
+    // Block edits to the title line (line 1) for daily notes
+    const dailyNoteTitleGuard = isDailyNote ? EditorState.transactionFilter.of(tr => {
+      if (!tr.docChanged) return tr;
+      const line1End = tr.startState.doc.line(1).to;
+      let touchesLine1 = false;
+      tr.changes.iterChangedRanges((fromA, toA) => {
+        if (fromA <= line1End) touchesLine1 = true;
+      });
+      return touchesLine1 ? [] : tr;
+    }) : [];
+
     const state = EditorState.create({
       doc: initialContent,
       extensions: [
+        dailyNoteTitleGuard,
         cursorPositionField,
         history(),
         listBackspaceKeymap,

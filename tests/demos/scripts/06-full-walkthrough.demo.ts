@@ -292,7 +292,8 @@ test('Demo: Full Walkthrough', async () => {
     await demo.pressKey('Enter');
     await demo.pressKey('Enter');
     await demo.typeText('> The best way to predict the future is to invent it.');
-    await demo.pressKey('Enter');
+    await demo.pressKey('Enter');     // auto-continues: "> "
+    await demo.pressKey('Backspace'); // removes "> ", exits blockquote
     await demo.pressKey('Enter');
 
     await demo.typeText('## Code Block');
@@ -343,7 +344,8 @@ test('Demo: Full Walkthrough', async () => {
     await demo.pressKey('Enter');
     await demo.pressKey('Enter');
     await demo.typeText('See my [[Reading List]] for book recommendations.');
-    await demo.pause(1200);
+    // Wait for auto-rename to settle (2s debounce save + rename + re-render)
+    await demo.pause(3500);
 
     // --- Scene 12: Click an internal link to navigate ---
     const wikilink = page.locator('.cm-wikilink').first();

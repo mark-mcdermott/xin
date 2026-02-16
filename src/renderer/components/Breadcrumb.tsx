@@ -3,9 +3,10 @@ import React from 'react';
 interface BreadcrumbProps {
   path: string;
   onNavigate?: (path: string) => void;
+  displayName?: string;
 }
 
-export const Breadcrumb: React.FC<BreadcrumbProps> = ({ path, onNavigate }) => {
+export const Breadcrumb: React.FC<BreadcrumbProps> = ({ path, onNavigate, displayName }) => {
   // Split path into segments
   const segments = path.split('/').filter(Boolean);
   const hasLeadingSlash = path.startsWith('/');
@@ -29,7 +30,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ path, onNavigate }) => {
           {index > 0 && <span className="flex-shrink-0" style={{ color: 'var(--breadcrumb-separator)', marginRight: '4px' }}>/</span>}
           {segment.isLast ? (
             <span className="truncate" style={{ color: 'var(--breadcrumb-text)', marginLeft: '1px' }}>
-              {segment.name}
+              {displayName || segment.name}
             </span>
           ) : (
             <button

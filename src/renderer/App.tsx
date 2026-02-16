@@ -183,6 +183,9 @@ const App: React.FC = () => {
   // File tree expansion state (for controlled breadcrumb navigation)
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
+  // Live display names for instant title updates (maps file path → display title)
+  const [displayNames, setDisplayNames] = useState<Map<string, string>>(new Map());
+
   // Guard against concurrent auto-renames
   const isRenamingRef = useRef(false);
 
@@ -444,6 +447,20 @@ const App: React.FC = () => {
 
     setExpandedPaths(newExpandedPaths);
   }, [sidebarTab]);
+
+  // Handle instant title changes from the editor
+  const handleTitleChange = useCallback((title: string) => {
+    if (!selectedFile) return;
+    setDisplayNames(prev => {
+      const next = new Map(prev);
+      if (title) {
+        next.set(selectedFile, title);
+      } else {
+        next.delete(selectedFile);
+      }
+      return next;
+    });
+  }, [selectedFile]);
 
   // Load today's note on mount
   useEffect(() => {
@@ -1245,6 +1262,14 @@ const App: React.FC = () => {
         }));
       }
 
+      // Clean up old display name entry since the new path now matches the title
+      setDisplayNames(prev => {
+        if (!prev.has(oldPath)) return prev;
+        const next = new Map(prev);
+        next.delete(oldPath);
+        return next;
+      });
+
       return newPath;
     } catch (err: any) {
       console.error('Failed to rename file:', err);
@@ -1711,7 +1736,7 @@ const App: React.FC = () => {
               {openTabs.map((tab, index) => {
                 const isActive = index === activeTabIndex && activePanel === 'file';
                 const tabKey = tab.type === 'file' ? tab.path : tab.type === 'remote-file' ? `remote-${tab.blogId}-${tab.path}` : `tag-${tab.tag}`;
-                const tabLabel = tab.type === 'file' ? getFileName(tab.path) : tab.type === 'remote-file' ? getFileName(tab.path) : tab.tag;
+                const tabLabel = tab.type === 'file' ? (displayNames.get(tab.path) || getFileName(tab.path)) : tab.type === 'remote-file' ? getFileName(tab.path) : tab.tag;
                 return (
                   <div
                     key={tabKey}
@@ -2010,6 +2035,7 @@ const App: React.FC = () => {
                 expandedPaths={expandedPaths.size > 0 ? expandedPaths : undefined}
                 onFolderToggle={handleFolderToggle}
                 selectedFile={selectedFile}
+                displayNames={displayNames}
               />
             ) : sidebarTab === 'docs' ? (
               <DocsTreeNav
@@ -2316,7 +2342,7 @@ const App: React.FC = () => {
               {/* Breadcrumbs - same grid cell, centered */}
               <div style={{ gridRow: 1, gridColumn: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                 <div style={{ pointerEvents: 'auto' }}>
-                  <Breadcrumb path={selectedFile!} onNavigate={handleBreadcrumbNavigate} />
+                  <Breadcrumb path={selectedFile!} onNavigate={handleBreadcrumbNavigate} displayName={displayNames.get(selectedFile!)} />
                 </div>
               </div>
 
@@ -2357,6 +2383,8 @@ const App: React.FC = () => {
                   noteNames={noteNames}
                   blogs={blogs}
                   onPublishBlogBlock={handlePublishBlogBlock}
+                  onTitleChange={handleTitleChange}
+                  isDailyNote={selectedFile?.includes('/daily-notes/') ?? false}
                 />
               ) : (
                 <MarkdownEditor
