@@ -183,6 +183,9 @@ const App: React.FC = () => {
   // File tree expansion state (for controlled breadcrumb navigation)
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
+  // Guard against concurrent auto-renames
+  const isRenamingRef = useRef(false);
+
   // Blog block publish progress state
   const [blogBlockPublishJobId, setBlogBlockPublishJobId] = useState<string | null>(null);
 
@@ -991,6 +994,25 @@ const App: React.FC = () => {
 
       // Refresh tags after save to pick up new tags
       await refreshTags();
+
+      // Auto-rename file if title changed (not for daily notes)
+      const firstLine = content.split('\n')[0];
+      const titleMatch = firstLine.match(/^#\s+(.+)/);
+      if (titleMatch && !isRenamingRef.current) {
+        const newTitle = titleMatch[1].trim();
+        const currentName = selectedFile.split('/').pop()?.replace('.md', '') ?? '';
+        const isDailyNote = selectedFile.includes('/daily-notes/');
+        const safeName = newTitle.replace(/[\/\\:*?"<>|]/g, '-').trim();
+
+        if (safeName && !isDailyNote && safeName !== currentName) {
+          isRenamingRef.current = true;
+          try {
+            await handleRenameFile(selectedFile, safeName + '.md');
+          } finally {
+            isRenamingRef.current = false;
+          }
+        }
+      }
     } catch (err: any) {
       console.error('Failed to save file:', err);
       throw err;
