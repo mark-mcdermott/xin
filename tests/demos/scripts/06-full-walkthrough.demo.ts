@@ -95,6 +95,14 @@ test('Demo: Full Walkthrough', async () => {
   };
 
   try {
+    // Close any tabs that auto-opened on launch (e.g. today's daily note)
+    const closeButtons = page.locator('button[title="Close tab"]');
+    const count = await closeButtons.count();
+    for (let i = count - 1; i >= 0; i--) {
+      await closeButtons.nth(i).click();
+      await demo.pause(300);
+    }
+
     await demo.sectionPause();
 
     // =========================================================
@@ -117,10 +125,10 @@ test('Demo: Full Walkthrough', async () => {
     await demo.pressKey('Enter');
 
     // --- Scene 2: Type work notes with #work tag ---
-    await demo.typeText('## Sprint Review');
-    await demo.pressKey('Enter');
-    await demo.pressKey('Enter');
     await demo.typeText('#work');
+    await demo.pressKey('Enter');
+    await demo.pressKey('Enter');
+    await demo.typeText('## Sprint Review');
     await demo.pressKey('Enter');
     await demo.pressKey('Enter');
     await demo.typeText('- Deployed auth service v2 to production');
@@ -135,10 +143,10 @@ test('Demo: Full Walkthrough', async () => {
     await exitList();
     await demo.pressKey('Enter');
 
-    await demo.typeText('## Evening Notes');
-    await demo.pressKey('Enter');
-    await demo.pressKey('Enter');
     await demo.typeText('#personal');
+    await demo.pressKey('Enter');
+    await demo.pressKey('Enter');
+    await demo.typeText('## Evening Notes');
     await demo.pressKey('Enter');
     await demo.pressKey('Enter');
     await demo.typeText('- Finished chapter 5 of DDIA');
@@ -164,12 +172,14 @@ test('Demo: Full Walkthrough', async () => {
     await demo.clickOn(editorWork);
     await demo.pause(300);
 
+    await demo.pressKey('Meta+Home');
+    await demo.pause(200);
     await demo.pressKey('Meta+a');
     await demo.pause(200);
 
-    await demo.typeText('# Q1 Planning');
-    await demo.pressKey('Enter');
-    await demo.pressKey('Enter');
+    await demo.typeText('Q1 Planning');
+    await demo.pressKey('Meta+End');
+    await demo.pause(200);
     await demo.typeText('#work');
     await demo.pressKey('Enter');
     await demo.pressKey('Enter');
@@ -193,12 +203,14 @@ test('Demo: Full Walkthrough', async () => {
     await demo.clickOn(editorPersonal);
     await demo.pause(300);
 
+    await demo.pressKey('Meta+Home');
+    await demo.pause(200);
     await demo.pressKey('Meta+a');
     await demo.pause(200);
 
-    await demo.typeText('# Reading List');
-    await demo.pressKey('Enter');
-    await demo.pressKey('Enter');
+    await demo.typeText('Reading List');
+    await demo.pressKey('Meta+End');
+    await demo.pause(200);
     await demo.typeText('#personal');
     await demo.pressKey('Enter');
     await demo.pressKey('Enter');
@@ -215,6 +227,8 @@ test('Demo: Full Walkthrough', async () => {
     // =========================================================
 
     // --- Scene 7: Switch to Tags sidebar ---
+    // Wait for all notes to save (2s debounce + buffer) so Tags picks them up
+    await demo.pause(3000);
     await demo.clickOn(tagsBtn);
     await demo.pause(1000);
 
@@ -263,12 +277,14 @@ test('Demo: Full Walkthrough', async () => {
     await demo.clickOn(editorMd);
     await demo.pause(300);
 
+    await demo.pressKey('Meta+Home');
+    await demo.pause(200);
     await demo.pressKey('Meta+a');
     await demo.pause(200);
 
-    await demo.typeText('# Markdown Features');
-    await demo.pressKey('Enter');
-    await demo.pressKey('Enter');
+    await demo.typeText('Markdown Features');
+    await demo.pressKey('Meta+End');
+    await demo.pause(200);
 
     await demo.typeText('## Text Formatting');
     await demo.pressKey('Enter');
@@ -331,12 +347,14 @@ test('Demo: Full Walkthrough', async () => {
     await demo.clickOn(editorLinks);
     await demo.pause(300);
 
+    await demo.pressKey('Meta+Home');
+    await demo.pause(200);
     await demo.pressKey('Meta+a');
     await demo.pause(200);
 
-    await demo.typeText('# Internal Links');
-    await demo.pressKey('Enter');
-    await demo.pressKey('Enter');
+    await demo.typeText('Internal Links');
+    await demo.pressKey('Meta+End');
+    await demo.pause(200);
     await demo.typeText('Xin supports wiki-style links between notes.');
     await demo.pressKey('Enter');
     await demo.pressKey('Enter');

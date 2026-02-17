@@ -2289,6 +2289,8 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastInitialContentRef = useRef(initialContent);
   const isSavingRef = useRef(false);
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
 
   const blogsRef = useRef(blogs);
   blogsRef.current = blogs;
@@ -2805,6 +2807,27 @@ tags: [""]
           if (line.number === 1) return true;
           return false;
         }
+      },
+      {
+        key: 'Mod-a',
+        run: (view) => {
+          const pos = view.state.selection.main.head;
+          const doc = view.state.doc;
+          const line = doc.lineAt(pos);
+          if (line.number === 1) {
+            // Title: select only the title text, preserving the "# " marker
+            const line1 = doc.line(1);
+            const text = line1.text;
+            const markerMatch = text.match(/^#+\s/);
+            const contentStart = markerMatch ? line1.from + markerMatch[0].length : line1.from;
+            view.dispatch({ selection: { anchor: contentStart, head: line1.to } });
+          } else {
+            // Body: select from start of line 2 to end of document
+            const line2 = doc.line(2);
+            view.dispatch({ selection: { anchor: line2.from, head: doc.length } });
+          }
+          return true;
+        }
       }
     ]);
 
@@ -3113,8 +3136,15 @@ tags: [""]
     contentRef.current = initialContent;
 
     return () => {
+      // Flush any pending save on unmount so content isn't lost on tab switch
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      const content = view.state.doc.toString();
+      if (content !== contentRef.current) {
+        contentRef.current = content;
+        onSaveRef.current(content);
       }
       view.destroy();
     };

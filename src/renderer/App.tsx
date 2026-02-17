@@ -57,8 +57,9 @@ import { useToast } from './components/Toast';
 
 type SidebarTab = 'files' | 'tags' | 'daily' | 'docs' | 'merch' | 'settings';
 type EditorViewMode = 'markdown' | 'editor' | 'split' | 'preview';
+let nextTabId = 1;
 type Tab =
-  | { type: 'file'; path: string; content: string }
+  | { type: 'file'; id: number; path: string; content: string }
   | { type: 'tag'; tag: string }
   | { type: 'remote-file'; blogId: string; path: string; content: string; sha: string; originalContent: string };
 
@@ -282,7 +283,7 @@ const App: React.FC = () => {
         } else {
           // Need to load the file
           const content = await readFile(entry.path);
-          setOpenTabs(prev => [...prev, { type: 'file', path: entry.path, content }]);
+          setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path: entry.path, content }]);
           setActiveTabIndex(openTabs.length);
           setActivePanel('file');
         }
@@ -370,7 +371,7 @@ const App: React.FC = () => {
 
       // Close all tabs and open today's note for the new vault
       const { path, content } = await getTodayNote();
-      setOpenTabs([{ type: 'file', path, content }]);
+      setOpenTabs([{ type: 'file', id: nextTabId++, path, content }]);
       setActiveTabIndex(0);
 
       // Reset navigation history
@@ -467,7 +468,7 @@ const App: React.FC = () => {
     const loadTodayNote = async () => {
       try {
         const { path, content } = await getTodayNote();
-        setOpenTabs([{ type: 'file', path, content }]);
+        setOpenTabs([{ type: 'file', id: nextTabId++, path, content }]);
         setActiveTabIndex(0);
       } catch (err) {
         console.error('Failed to load today note:', err);
@@ -765,7 +766,7 @@ const App: React.FC = () => {
         setActiveTabIndex(existingIndex);
       } else {
         const content = await readFile(path);
-        setOpenTabs(prev => [...prev, { type: 'file', path, content }]);
+        setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content }]);
         setActiveTabIndex(openTabs.length);
       }
       setActivePanel('file');
@@ -926,7 +927,7 @@ const App: React.FC = () => {
       try {
         await createFile(path, initialContent);
         await refreshFileTree();
-        setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
+        setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
         setActiveTabIndex(openTabs.length);
         setActivePanel('file');
       } catch (err: any) {
@@ -957,7 +958,7 @@ const App: React.FC = () => {
       if (existingIndex >= 0) {
         setActiveTabIndex(existingIndex);
       } else {
-        setOpenTabs(prev => [...prev, { type: 'file', path, content }]);
+        setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content }]);
         setActiveTabIndex(openTabs.length);
       }
       setActivePanel('file');
@@ -981,7 +982,7 @@ const App: React.FC = () => {
       if (existingIndex >= 0) {
         setActiveTabIndex(existingIndex);
       } else {
-        setOpenTabs(prev => [...prev, { type: 'file', path, content }]);
+        setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content }]);
         setActiveTabIndex(openTabs.length);
       }
       setActivePanel('file');
@@ -1013,6 +1014,9 @@ const App: React.FC = () => {
       await refreshTags();
 
       // Auto-rename file if title changed (not for daily notes)
+      // Note: we rename the file directly here instead of calling handleRenameFile,
+      // because handleRenameFile reads from the stale openTabs closure and would
+      // overwrite the just-saved content with old content, causing body text loss.
       const firstLine = content.split('\n')[0];
       const titleMatch = firstLine.match(/^#\s+(.+)/);
       if (titleMatch && !isRenamingRef.current) {
@@ -1024,7 +1028,20 @@ const App: React.FC = () => {
         if (safeName && !isDailyNote && safeName !== currentName) {
           isRenamingRef.current = true;
           try {
-            await handleRenameFile(selectedFile, safeName + '.md');
+            const newPath = await renameFile(selectedFile, safeName + '.md');
+            // Update tab path only — content is already correct from the save above
+            setOpenTabs(prev => prev.map(tab =>
+              tab.type === 'file' && tab.path === selectedFile
+                ? { ...tab, path: newPath }
+                : tab
+            ));
+            // Clean up old display name entry
+            setDisplayNames(prev => {
+              if (!prev.has(selectedFile)) return prev;
+              const next = new Map(prev);
+              next.delete(selectedFile);
+              return next;
+            });
           } finally {
             isRenamingRef.current = false;
           }
@@ -1148,7 +1165,7 @@ const App: React.FC = () => {
 
     try {
       await createFile(path, initialContent);
-      setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
+      setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
       setActiveTabIndex(openTabs.length);
       setActivePanel('file');
     } catch (err: any) {
@@ -1176,7 +1193,7 @@ const App: React.FC = () => {
         await createFile(path, initialContent);
 
         // Open the new file in a tab
-        setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
+        setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
         setActiveTabIndex(openTabs.length);
         setActivePanel('file');
       } else {
@@ -1314,7 +1331,7 @@ const App: React.FC = () => {
 
       try {
         await createFile(path, initialContent);
-        setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
+        setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
         setActiveTabIndex(openTabs.length);
         setActivePanel('file');
       } catch (err: any) {
@@ -1341,7 +1358,7 @@ const App: React.FC = () => {
         await createFile(path, initialContent);
 
         // Open the new file in a tab
-        setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
+        setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
         setActiveTabIndex(openTabs.length);
         setActivePanel('file');
       } else {
@@ -1362,6 +1379,17 @@ const App: React.FC = () => {
   const handleDeleteFile = async (path: string, type: 'file' | 'folder') => {
     try {
       await deleteFile(path);
+
+      // Clear stale display names for deleted file/folder
+      setDisplayNames(prev => {
+        const next = new Map(prev);
+        for (const key of prev.keys()) {
+          if (key === path || key.startsWith(path + '/')) {
+            next.delete(key);
+          }
+        }
+        return next;
+      });
 
       // Close the tab if this file was open
       const tabIndex = openTabs.findIndex(tab => tab.type === 'file' && tab.path === path);
@@ -1451,7 +1479,7 @@ const App: React.FC = () => {
 
     try {
       await createFile(path, initialContent);
-      setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
+      setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
       setActiveTabIndex(openTabs.length);
       setActivePanel('file');
     } catch (err: any) {
@@ -1462,7 +1490,7 @@ const App: React.FC = () => {
         const newPath = `notes/${name}`;
         const newContent = `# ${name.replace('.md', '')}\n\n`;
         await createFile(newPath, newContent);
-        setOpenTabs(prev => [...prev, { type: 'file', path: newPath, content: newContent }]);
+        setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path: newPath, content: newContent }]);
         setActiveTabIndex(openTabs.length);
         setActivePanel('file');
       } else {
@@ -1479,7 +1507,7 @@ const App: React.FC = () => {
       await createFile(path, initialContent);
 
       // Open the new file in a tab
-      setOpenTabs(prev => [...prev, { type: 'file', path, content: initialContent }]);
+      setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
       setActiveTabIndex(openTabs.length);
       setActivePanel('file');
     } else {
@@ -2374,7 +2402,7 @@ const App: React.FC = () => {
             <div className="flex-1 overflow-hidden">
               {editorViewMode === 'editor' ? (
                 <LiveMarkdownEditor
-                  key={selectedFile}
+                  key={activeFileTab?.id}
                   initialContent={fileContent}
                   filePath={selectedFile!}
                   onSave={handleSave}
@@ -2388,7 +2416,7 @@ const App: React.FC = () => {
                 />
               ) : (
                 <MarkdownEditor
-                  key={selectedFile}
+                  key={activeFileTab?.id}
                   initialContent={fileContent}
                   filePath={selectedFile!}
                   onSave={handleSave}

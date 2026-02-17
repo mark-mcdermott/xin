@@ -56,6 +56,28 @@ export async function startRecording(options: RecordingOptions): Promise<Recordi
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(2000);
 
+  // Disable spell check to prevent macOS autocomplete from swallowing keystrokes
+  await page.evaluate(() => {
+    document.querySelectorAll('[contenteditable]').forEach(el => {
+      el.setAttribute('spellcheck', 'false');
+    });
+    // Also observe future contenteditable elements (e.g. new tabs)
+    new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (node instanceof HTMLElement) {
+            node.querySelectorAll('[contenteditable]').forEach(el => {
+              el.setAttribute('spellcheck', 'false');
+            });
+            if (node.getAttribute('contenteditable')) {
+              node.setAttribute('spellcheck', 'false');
+            }
+          }
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+
   // Resize viewport to target resolution
   await page.setViewportSize(resolution);
 
