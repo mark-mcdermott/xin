@@ -56,6 +56,13 @@ export async function startRecording(options: RecordingOptions): Promise<Recordi
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(2000);
 
+  // Force dark mode for consistent recordings
+  await page.evaluate(async () => {
+    await window.electronAPI.theme.set('dark');
+    document.documentElement.dataset.theme = 'dark';
+  });
+  await page.waitForTimeout(300);
+
   // Disable spell check to prevent macOS autocomplete from swallowing keystrokes
   await page.evaluate(() => {
     document.querySelectorAll('[contenteditable]').forEach(el => {

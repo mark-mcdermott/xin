@@ -223,8 +223,9 @@ const App: React.FC = () => {
 
   // Navigation history for back/forward
   type HistoryEntry = { type: 'file'; path: string } | { type: 'tag'; tag: string } | { type: 'settings' };
-  const [navHistory, setNavHistory] = useState<HistoryEntry[]>([]);
-  const [navHistoryIndex, setNavHistoryIndex] = useState(-1);
+  const [navState, setNavState] = useState<{ history: HistoryEntry[]; index: number }>({ history: [], index: -1 });
+  const navHistory = navState.history;
+  const navHistoryIndex = navState.index;
   const isNavigatingRef = useRef(false); // Prevent adding to history during back/forward
 
   // Vault selection state
@@ -251,9 +252,9 @@ const App: React.FC = () => {
   const pushToHistory = useCallback((entry: HistoryEntry) => {
     if (isNavigatingRef.current) return; // Don't push during back/forward navigation
 
-    setNavHistory(prev => {
+    setNavState(prev => {
       // Remove any forward history when pushing new entry
-      const newHistory = prev.slice(0, navHistoryIndex + 1);
+      const newHistory = prev.history.slice(0, prev.index + 1);
       // Don't add duplicate consecutive entries
       const lastEntry = newHistory[newHistory.length - 1];
       if (lastEntry &&
@@ -263,10 +264,9 @@ const App: React.FC = () => {
            (entry.type === 'settings' && lastEntry.type === 'settings'))) {
         return prev;
       }
-      return [...newHistory, entry];
+      return { history: [...newHistory, entry], index: prev.index + 1 };
     });
-    setNavHistoryIndex(prev => prev + 1);
-  }, [navHistoryIndex]);
+  }, []);
 
   const canGoBack = navHistoryIndex > 0;
   const canGoForward = navHistoryIndex < navHistory.length - 1;
@@ -309,14 +309,14 @@ const App: React.FC = () => {
   const goBack = useCallback(async () => {
     if (!canGoBack) return;
     const newIndex = navHistoryIndex - 1;
-    setNavHistoryIndex(newIndex);
+    setNavState(prev => ({ ...prev, index: newIndex }));
     await navigateToEntry(navHistory[newIndex]);
   }, [canGoBack, navHistoryIndex, navHistory, navigateToEntry]);
 
   const goForward = useCallback(async () => {
     if (!canGoForward) return;
     const newIndex = navHistoryIndex + 1;
-    setNavHistoryIndex(newIndex);
+    setNavState(prev => ({ ...prev, index: newIndex }));
     await navigateToEntry(navHistory[newIndex]);
   }, [canGoForward, navHistoryIndex, navHistory, navigateToEntry]);
 
@@ -375,8 +375,7 @@ const App: React.FC = () => {
       setActiveTabIndex(0);
 
       // Reset navigation history
-      setNavHistory([]);
-      setNavHistoryIndex(-1);
+      setNavState({ history: [], index: -1 });
     } catch (err) {
       console.error('Failed to refresh after vault switch:', err);
     }
@@ -930,6 +929,7 @@ const App: React.FC = () => {
         setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
         setActiveTabIndex(openTabs.length);
         setActivePanel('file');
+        pushToHistory({ type: 'file', path });
       } catch (err: any) {
         console.error('Failed to create file:', err);
       }
@@ -1035,6 +1035,15 @@ const App: React.FC = () => {
                 ? { ...tab, path: newPath }
                 : tab
             ));
+            // Update navigation history entries for the renamed file
+            setNavState(prev => ({
+              ...prev,
+              history: prev.history.map(entry =>
+                entry.type === 'file' && entry.path === selectedFile
+                  ? { ...entry, path: newPath }
+                  : entry
+              ),
+            }));
             // Clean up old display name entry
             setDisplayNames(prev => {
               if (!prev.has(selectedFile)) return prev;
@@ -1168,6 +1177,7 @@ const App: React.FC = () => {
       setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
       setActiveTabIndex(openTabs.length);
       setActivePanel('file');
+      pushToHistory({ type: 'file', path });
     } catch (err: any) {
       console.error('Failed to create file:', err);
     }
@@ -1196,6 +1206,7 @@ const App: React.FC = () => {
         setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
         setActiveTabIndex(openTabs.length);
         setActivePanel('file');
+        pushToHistory({ type: 'file', path });
       } else {
         const path = name;
         await createFolder(path);
@@ -1278,6 +1289,19 @@ const App: React.FC = () => {
           return tab;
         }));
       }
+
+      // Update navigation history entries for the renamed file/folder
+      setNavState(prev => ({
+        ...prev,
+        history: prev.history.map(entry => {
+          if (entry.type !== 'file') return entry;
+          if (entry.path === oldPath) return { ...entry, path: newPath };
+          if (entry.path.startsWith(oldPath + '/')) {
+            return { ...entry, path: newPath + entry.path.substring(oldPath.length) };
+          }
+          return entry;
+        }),
+      }));
 
       // Clean up old display name entry since the new path now matches the title
       setDisplayNames(prev => {
@@ -1525,6 +1549,21 @@ const App: React.FC = () => {
       // Refresh file tree and tags
       await refreshFileTree();
       await refreshTags();
+
+      // Reload content for any open file tabs whose files were modified
+      if (result.filesModified.length > 0) {
+        const modifiedSet = new Set(result.filesModified);
+        const updatedTabs = await Promise.all(
+          openTabs.map(async (tab) => {
+            if (tab.type === 'file' && modifiedSet.has(tab.path)) {
+              const freshContent = await readFile(tab.path);
+              return { ...tab, content: freshContent };
+            }
+            return tab;
+          })
+        );
+        setOpenTabs(updatedTabs);
+      }
 
       // Close the tag tab if open
       const tagTabIndex = openTabs.findIndex(tab => tab.type === 'tag' && tab.tag === tag);

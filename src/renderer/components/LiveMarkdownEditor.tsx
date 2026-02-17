@@ -12,7 +12,7 @@ import {
 import { markdown } from '@codemirror/lang-markdown';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { autocompletion, CompletionContext, Completion, startCompletion } from '@codemirror/autocomplete';
-import { spellCheckLinter, spellCheckTheme, spellCheckKeymap, spellCheckCompletionSource } from '../utils/spellcheck';
+import { spellCheckLinter, spellCheckTheme, spellCheckKeymap, spellCheckCompletionSource, addBlogNamesToDictionary } from '../utils/spellcheck';
 import hljs from 'highlight.js/lib/core';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -2294,6 +2294,13 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
 
   const blogsRef = useRef(blogs);
   blogsRef.current = blogs;
+
+  // Add blog names to spellcheck dictionary so they aren't flagged
+  useEffect(() => {
+    if (blogs && blogs.length > 0) {
+      addBlogNamesToDictionary(blogs.map(b => b.name));
+    }
+  }, [blogs]);
 
   const noteNamesRef = useRef<string[]>(noteNames ?? []);
   noteNamesRef.current = noteNames ?? [];

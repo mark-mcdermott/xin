@@ -185,7 +185,7 @@ export class TagManager {
         for (const section of parsed.sections) {
           if (section.tag === tag) {
             // Remove tag line and content lines
-            for (let i = section.startLine - 1; i <= section.endLine + 1; i++) {
+            for (let i = section.startLine - 1; i <= section.endLine; i++) {
               linesToKeep.delete(i);
             }
           }

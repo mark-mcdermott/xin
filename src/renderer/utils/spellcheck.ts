@@ -32,6 +32,8 @@ const ignoreWords = new Set([
   // Markdown/blog terms
   'frontmatter', 'markdown', 'mdx', 'blockquote', 'codeblock',
   'todo', 'todos', 'readme', 'changelog',
+  // App name
+  'xin',
 ]);
 
 // Custom dictionary - user can add words here
@@ -40,6 +42,19 @@ const customDictionary = new Set<string>();
 // Add word to custom dictionary
 export function addToCustomDictionary(word: string): void {
   customDictionary.add(word.toLowerCase());
+}
+
+// Add blog names to custom dictionary so they aren't flagged as misspelled
+export function addBlogNamesToDictionary(blogNames: string[]): void {
+  for (const name of blogNames) {
+    // Add the full name and individual parts (e.g. "markmcdermott.io" → "markmcdermott", "io")
+    customDictionary.add(name.toLowerCase());
+    for (const part of name.split(/[.\-_]/)) {
+      if (part.length > 2) {
+        customDictionary.add(part.toLowerCase());
+      }
+    }
+  }
 }
 
 // Check if a word is correctly spelled
