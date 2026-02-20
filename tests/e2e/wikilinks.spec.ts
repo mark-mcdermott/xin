@@ -17,7 +17,8 @@ test.describe('Wikilinks', () => {
     await window.waitForTimeout(2000);
 
     // Open today's note to get an editor
-    const todayButton = window.locator('button[title="Today\'s Note"]').first();
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const todayButton = iconSidebar.locator('button').first();
     await todayButton.click();
     await window.waitForTimeout(1000);
   });

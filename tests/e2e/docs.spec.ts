@@ -22,7 +22,8 @@ test.describe('Documentation', () => {
   });
 
   test('should open docs page with overview content', async () => {
-    const docsButton = window.locator('button[title="Documentation"]');
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const docsButton = iconSidebar.locator('button').nth(3);
     await expect(docsButton).toBeVisible({ timeout: 5000 });
     await docsButton.click();
     await window.waitForTimeout(500);
@@ -32,7 +33,8 @@ test.describe('Documentation', () => {
   });
 
   test('should display docs tree navigation in sidebar', async () => {
-    const docsButton = window.locator('button[title="Documentation"]');
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const docsButton = iconSidebar.locator('button').nth(3);
     await docsButton.click();
     await window.waitForTimeout(500);
 
@@ -41,7 +43,8 @@ test.describe('Documentation', () => {
   });
 
   test('should navigate to a doc page from the tree', async () => {
-    const docsButton = window.locator('button[title="Documentation"]');
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const docsButton = iconSidebar.locator('button').nth(3);
     await docsButton.click();
     await window.waitForTimeout(500);
 

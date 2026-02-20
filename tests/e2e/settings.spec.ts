@@ -22,7 +22,9 @@ test.describe('Settings', () => {
   });
 
   test('should open settings page with Settings header', async () => {
-    const settingsButton = window.locator('button[title="Settings"]');
+    const settingsButton = window.locator('button').filter({
+      has: window.locator('svg.lucide-settings'),
+    }).first();
     await expect(settingsButton).toBeVisible({ timeout: 5000 });
     await settingsButton.click();
     await window.waitForTimeout(500);
@@ -32,7 +34,9 @@ test.describe('Settings', () => {
   });
 
   test('should display vault path setting', async () => {
-    const settingsButton = window.locator('button[title="Settings"]');
+    const settingsButton = window.locator('button').filter({
+      has: window.locator('svg.lucide-settings'),
+    }).first();
     await settingsButton.click();
     await window.waitForTimeout(500);
 

@@ -27,7 +27,8 @@ test.describe('Tab Management', () => {
   });
 
   test('should create a tab when opening daily note', async () => {
-    const todayButton = window.locator('button[title="Today\'s Note"]').first();
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const todayButton = iconSidebar.locator('button').first();
     await todayButton.click();
     await window.waitForTimeout(1000);
 
@@ -37,7 +38,8 @@ test.describe('Tab Management', () => {
   });
 
   test('should close tab with Close tab button', async () => {
-    const todayButton = window.locator('button[title="Today\'s Note"]').first();
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const todayButton = iconSidebar.locator('button').first();
     await todayButton.click();
     await window.waitForTimeout(1000);
 
@@ -56,7 +58,8 @@ test.describe('Tab Management', () => {
   });
 
   test('should not duplicate tab when reopening same note', async () => {
-    const todayButton = window.locator('button[title="Today\'s Note"]').first();
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const todayButton = iconSidebar.locator('button').first();
 
     // Open today's note twice
     await todayButton.click();

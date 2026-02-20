@@ -22,7 +22,8 @@ test.describe('Tags', () => {
   });
 
   test('should open tag browser when clicking tags icon', async () => {
-    const tagsButton = window.locator('button[title="Tags"]');
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const tagsButton = iconSidebar.locator('button').nth(2);
     await expect(tagsButton).toBeVisible({ timeout: 5000 });
     await tagsButton.click();
     await window.waitForTimeout(500);
@@ -32,7 +33,8 @@ test.describe('Tags', () => {
   });
 
   test('should style tags in editor content', async () => {
-    const todayButton = window.locator('button[title="Today\'s Note"]').first();
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const todayButton = iconSidebar.locator('button').first();
     await todayButton.click();
     await window.waitForTimeout(1000);
 

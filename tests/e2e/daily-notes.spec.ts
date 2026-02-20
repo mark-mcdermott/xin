@@ -22,7 +22,8 @@ test.describe('Daily Notes', () => {
   });
 
   test('should create today\'s daily note with correct date tab', async () => {
-    const todayButton = window.locator('button[title="Today\'s Note"]').first();
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const todayButton = iconSidebar.locator('button').first();
     await expect(todayButton).toBeVisible({ timeout: 5000 });
     await todayButton.click();
     await window.waitForTimeout(1000);
@@ -34,7 +35,8 @@ test.describe('Daily Notes', () => {
   });
 
   test('should show editor when daily note is open', async () => {
-    const todayButton = window.locator('button[title="Today\'s Note"]').first();
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const todayButton = iconSidebar.locator('button').first();
     await todayButton.click();
     await window.waitForTimeout(1000);
 
@@ -43,7 +45,8 @@ test.describe('Daily Notes', () => {
   });
 
   test('should allow typing in editor and retain content', async () => {
-    const todayButton = window.locator('button[title="Today\'s Note"]').first();
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const todayButton = iconSidebar.locator('button').first();
     await todayButton.click();
     await window.waitForTimeout(1000);
 

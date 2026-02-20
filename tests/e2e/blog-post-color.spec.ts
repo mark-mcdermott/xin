@@ -28,8 +28,9 @@ test.describe('Blog Post Color', () => {
     });
     await window.waitForTimeout(500);
 
-    // Open today's note
-    const todayButton = window.locator('button[title="Today\'s Note"]').first();
+    // Open today's note via icon sidebar (first button)
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const todayButton = iconSidebar.locator('button').first();
     await todayButton.click();
     await window.waitForTimeout(1000);
 

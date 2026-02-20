@@ -22,18 +22,20 @@ test.describe('File Tree', () => {
   });
 
   test('should display file tree panel when clicking files icon', async () => {
-    const filesButton = window.locator('button[title="File Tree"]');
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const filesButton = iconSidebar.locator('button').nth(1);
     await expect(filesButton).toBeVisible({ timeout: 5000 });
     await filesButton.click();
     await window.waitForTimeout(500);
 
-    // File tree panel should show with "NOTES" header and new note/folder buttons
-    const newNoteButton = window.locator('button[title="New note"]').first();
+    // File tree panel should show with new note button (FilePlus icon)
+    const newNoteButton = window.locator('svg.lucide-file-plus').first();
     await expect(newNoteButton).toBeVisible({ timeout: 5000 });
   });
 
   test('should open file in editor when clicked', async () => {
-    const filesButton = window.locator('button[title="File Tree"]');
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const filesButton = iconSidebar.locator('button').nth(1);
     await filesButton.click();
     await window.waitForTimeout(500);
 
@@ -52,11 +54,14 @@ test.describe('File Tree', () => {
   });
 
   test('should create new note via New note button', async () => {
-    const filesButton = window.locator('button[title="File Tree"]');
+    const iconSidebar = window.locator('div.w-\\[46px\\]');
+    const filesButton = iconSidebar.locator('button').nth(1);
     await filesButton.click();
     await window.waitForTimeout(500);
 
-    const newNoteButton = window.locator('button[title="New note"]').first();
+    // Find the new note button by its FilePlus icon
+    const newNoteIcon = window.locator('svg.lucide-file-plus').first();
+    const newNoteButton = newNoteIcon.locator('..');
     if (await newNoteButton.isVisible()) {
       await newNoteButton.click();
       await window.waitForTimeout(500);
