@@ -92,7 +92,7 @@ const App: React.FC = () => {
   const [storeView, setStoreView] = useState<'index' | 'product' | 'cart' | 'checkout'>('index');
   const [storeHistory, setStoreHistory] = useState<Array<{ view: 'index' | 'product' | 'cart' | 'checkout'; slug?: string }>>([{ view: 'index' }]);
   const [storeHistoryIndex, setStoreHistoryIndex] = useState(0);
-  const [currentProductSlug, setCurrentProductSlug] = useState<string | null>('xin-mech-hoodie');
+  const [currentProductSlug, setCurrentProductSlug] = useState<string | null>('xin-zipup-hoodie');
   const [productInitialSize, setProductInitialSize] = useState<string | undefined>(undefined);
   const [productInitialColor, setProductInitialColor] = useState<string | undefined>(undefined);
 

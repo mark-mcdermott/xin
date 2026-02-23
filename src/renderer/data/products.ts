@@ -22,148 +22,63 @@ export interface Product {
 
 export const products: Product[] = [
   {
-    id: 'xin-mech-hoodie',
-    slug: 'xin-mech-hoodie',
-    name: 'Soft Mech Pullover Hoodie',
-    description: 'Super comfy pullover hoodie. The front has the Xin mech small saying, "form is emptiness, emptiness is form". The back has the mech large with "XIN" under it.',
-    price: 3500, // $35.00
+    id: 'xin-zipup-hoodie',
+    slug: 'xin-zipup-hoodie',
+    name: 'Cleanroom Skull Zip Up Hoodie',
+    description: 'Unisex fleece zip up hoodie with the cleanroom skull on the front and wombat on the back.',
+    price: 4600, // $46.00 (2XL is $48.00)
     images: [
-      new URL('../assets/merch/hoodie-black-front.png', import.meta.url).href,
+      new URL('../assets/merch/zipup-black-front.png', import.meta.url).href,
     ],
     colorImages: {
       'Black': [
-        new URL('../assets/merch/hoodie-black-front.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-black-back.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-black-left.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-black-front-solo.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-black-back-solo.png', import.meta.url).href,
+        new URL('../assets/merch/zipup-black-front.png', import.meta.url).href,
+        new URL('../assets/merch/zipup-design-front.png', import.meta.url).href,
+        new URL('../assets/merch/zipup-design-back.png', import.meta.url).href,
       ],
-      'Heather Navy': [
-        new URL('../assets/merch/hoodie-navy-front.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-navy-back.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-navy-left.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-navy-front-solo.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-navy-back-solo.png', import.meta.url).href,
+      'Classic Navy': [
+        new URL('../assets/merch/zipup-navy-front.png', import.meta.url).href,
+        new URL('../assets/merch/zipup-design-front.png', import.meta.url).href,
+        new URL('../assets/merch/zipup-design-back.png', import.meta.url).href,
       ],
-      'Heather Forest': [
-        new URL('../assets/merch/hoodie-forest-front.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-forest-back.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-forest-left.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-forest-front-solo.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-forest-back-solo.png', import.meta.url).href,
+      'Charcoal Heather': [
+        new URL('../assets/merch/zipup-charcoal-front.png', import.meta.url).href,
+        new URL('../assets/merch/zipup-design-front.png', import.meta.url).href,
+        new URL('../assets/merch/zipup-design-back.png', import.meta.url).href,
       ],
-      'White': [
-        new URL('../assets/merch/hoodie-white-front.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-white-back.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-white-left.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-white-front-solo.png', import.meta.url).href,
-        new URL('../assets/merch/hoodie-white-back-solo.png', import.meta.url).href,
+      'Alpine Green': [
+        new URL('../assets/merch/zipup-green-front.png', import.meta.url).href,
+        new URL('../assets/merch/zipup-design-front.png', import.meta.url).href,
+        new URL('../assets/merch/zipup-design-back.png', import.meta.url).href,
       ],
     },
     category: 'hoodie',
-    printfulProductId: 0,
+    printfulProductId: 409474006,
     variants: [
       // Black
-      { id: 'hoodie-black-s', size: 'S', color: 'Black', colorHex: '#1a1a1a', printfulSyncVariantId: '6906a05f07fa2', inStock: true },
-      { id: 'hoodie-black-m', size: 'M', color: 'Black', colorHex: '#1a1a1a', printfulSyncVariantId: '6906a05f07242', inStock: true },
-      { id: 'hoodie-black-l', size: 'L', color: 'Black', colorHex: '#1a1a1a', printfulSyncVariantId: '6906a05f07298', inStock: true },
-      { id: 'hoodie-black-xl', size: 'XL', color: 'Black', colorHex: '#1a1a1a', printfulSyncVariantId: '6906a05f072a3', inStock: true },
-      // Heather Forest
-      { id: 'hoodie-forest-s', size: 'S', color: 'Heather Forest', colorHex: '#2d4a3e', printfulSyncVariantId: '6906a05f07416', inStock: true },
-      { id: 'hoodie-forest-m', size: 'M', color: 'Heather Forest', colorHex: '#2d4a3e', printfulSyncVariantId: '6906a05f07525', inStock: true },
-      { id: 'hoodie-forest-l', size: 'L', color: 'Heather Forest', colorHex: '#2d4a3e', printfulSyncVariantId: '6906a05f07561', inStock: true },
-      { id: 'hoodie-forest-xl', size: 'XL', color: 'Heather Forest', colorHex: '#2d4a3e', printfulSyncVariantId: '6906a05f07512', inStock: true },
-      // Heather Navy
-      { id: 'hoodie-navy-s', size: 'S', color: 'Heather Navy', colorHex: '#374151', printfulSyncVariantId: '6906a05f07379', inStock: true },
-      { id: 'hoodie-navy-m', size: 'M', color: 'Heather Navy', colorHex: '#374151', printfulSyncVariantId: '6906a05f073a5', inStock: true },
-      { id: 'hoodie-navy-l', size: 'L', color: 'Heather Navy', colorHex: '#374151', printfulSyncVariantId: '6906a05f07406', inStock: true },
-      { id: 'hoodie-navy-xl', size: 'XL', color: 'Heather Navy', colorHex: '#374151', printfulSyncVariantId: '6906a05f07452', inStock: true },
-      // White
-      { id: 'hoodie-white-s', size: 'S', color: 'White', colorHex: '#ffffff', printfulSyncVariantId: '6906a05f07642', inStock: true },
-      { id: 'hoodie-white-m', size: 'M', color: 'White', colorHex: '#ffffff', printfulSyncVariantId: '6906a05f076a5', inStock: true },
-      { id: 'hoodie-white-l', size: 'L', color: 'White', colorHex: '#ffffff', printfulSyncVariantId: '6906a05f07707', inStock: true },
-      { id: 'hoodie-white-xl', size: 'XL', color: 'White', colorHex: '#ffffff', printfulSyncVariantId: '6906a05f07737', inStock: true },
-    ]
-  },
-  {
-    id: 'xin-youth-hoodie',
-    slug: 'xin-youth-hoodie',
-    name: 'Pink Mech Pullover Hoodie',
-    description: 'Beautiful light pink pullover hoodie. The front has the Xin mech small saying, "form is emptiness, emptiness is form". The back has the mech large with "XIN" under it.',
-    price: 2800, // $28.00
-    images: [
-      new URL('../assets/merch/youth-hoodie-pink-front-closeup.png', import.meta.url).href,
-    ],
-    colorImages: {
-      'Light Pink': [
-        new URL('../assets/merch/youth-hoodie-pink-front-closeup.png', import.meta.url).href,
-        new URL('../assets/merch/youth-hoodie-pink-back-closeup.png', import.meta.url).href,
-        new URL('../assets/merch/youth-hoodie-pink-front-solo.png', import.meta.url).href,
-        new URL('../assets/merch/youth-hoodie-pink-back-solo.png', import.meta.url).href,
-        new URL('../assets/merch/youth-hoodie-pink-details.png', import.meta.url).href,
-      ],
-    },
-    category: 'hoodie',
-    printfulProductId: 0,
-    variants: [
-      // Light Pink
-      { id: 'youth-hoodie-pink-xs', size: 'XS', color: 'Light Pink', colorHex: '#FFB6C1', printfulSyncVariantId: '6961d95013e4d1', inStock: true },
-      { id: 'youth-hoodie-pink-s', size: 'S', color: 'Light Pink', colorHex: '#FFB6C1', printfulSyncVariantId: '6961d95013e572', inStock: true },
-      { id: 'youth-hoodie-pink-m', size: 'M', color: 'Light Pink', colorHex: '#FFB6C1', printfulSyncVariantId: '6961d95013e5f2', inStock: true },
-      { id: 'youth-hoodie-pink-l', size: 'L', color: 'Light Pink', colorHex: '#FFB6C1', printfulSyncVariantId: '6961d95013e676', inStock: true },
-      { id: 'youth-hoodie-pink-xl', size: 'XL', color: 'Light Pink', colorHex: '#FFB6C1', printfulSyncVariantId: '6961d95013e707', inStock: true },
-    ]
-  },
-  {
-    id: 'xin-mech-sticker',
-    slug: 'xin-mech-sticker',
-    name: 'Xin Mech Form Is Emptiness Stickers',
-    description: 'High-quality kiss-cut stickers featuring the Xin mech with "form is emptiness, emptiness is form". Available in 3 sizes. Perfect for laptops, water bottles, and notebooks.',
-    price: 350, // $3.50 (5.5" is $4.00)
-    images: [
-      new URL('../assets/merch/sticker-4x4-default.png', import.meta.url).href,
-    ],
-    colorImages: {
-      'White': [
-        new URL('../assets/merch/sticker-4x4-default.png', import.meta.url).href,
-        new URL('../assets/merch/sticker-4x4-front.png', import.meta.url).href,
-        new URL('../assets/merch/sticker-4x4-lifestyle.png', import.meta.url).href,
-        new URL('../assets/merch/sticker-3x3-default.png', import.meta.url).href,
-        new URL('../assets/merch/sticker-5x5-default.png', import.meta.url).href,
-      ],
-    },
-    category: 'sticker',
-    printfulProductId: 0,
-    variants: [
-      { id: 'sticker-3x3', size: '3"×3"', color: 'White', colorHex: '#ffffff', printfulSyncVariantId: '6962c110e371f3', inStock: true },
-      { id: 'sticker-4x4', size: '4"×4"', color: 'White', colorHex: '#ffffff', printfulSyncVariantId: '6962c110e37255', inStock: true },
-      { id: 'sticker-5x5', size: '5.5"×5.5"', color: 'White', colorHex: '#ffffff', printfulSyncVariantId: '6962c110e372a6', inStock: true },
-    ]
-  },
-  {
-    id: 'xin-mech-sticker-2',
-    slug: 'xin-mech-sticker-2',
-    name: 'Xin Mech Sticker',
-    description: 'High-quality kiss-cut sticker featuring the Xin mech with "XIN" underneath. Available in 3 sizes. Perfect for laptops, water bottles, and notebooks.',
-    price: 350, // $3.50 (5.5" is $4.00)
-    images: [
-      new URL('../assets/merch/sticker2-4x4-default.png', import.meta.url).href,
-    ],
-    colorImages: {
-      'White': [
-        new URL('../assets/merch/sticker2-4x4-default.png', import.meta.url).href,
-        new URL('../assets/merch/sticker2-4x4-front.png', import.meta.url).href,
-        new URL('../assets/merch/sticker2-4x4-lifestyle1.png', import.meta.url).href,
-        new URL('../assets/merch/sticker2-4x4-lifestyle2.png', import.meta.url).href,
-        new URL('../assets/merch/sticker2-4x4-lifestyle3.png', import.meta.url).href,
-      ],
-    },
-    category: 'sticker',
-    printfulProductId: 0,
-    variants: [
-      { id: 'sticker2-3x3', size: '3"×3"', color: 'White', colorHex: '#ffffff', printfulSyncVariantId: '6962c246862c98', inStock: true },
-      { id: 'sticker2-4x4', size: '4"×4"', color: 'White', colorHex: '#ffffff', printfulSyncVariantId: '6962c246862cf6', inStock: true },
-      { id: 'sticker2-5x5', size: '5.5"×5.5"', color: 'White', colorHex: '#ffffff', printfulSyncVariantId: '6962c246862d43', inStock: true },
+      { id: 'zipup-black-s', size: 'S', color: 'Black', colorHex: '#1a1a1a', printfulSyncVariantId: '694f5a135165a4', inStock: true },
+      { id: 'zipup-black-m', size: 'M', color: 'Black', colorHex: '#1a1a1a', printfulSyncVariantId: '694f5a13516642', inStock: true },
+      { id: 'zipup-black-l', size: 'L', color: 'Black', colorHex: '#1a1a1a', printfulSyncVariantId: '694f5a135166c8', inStock: true },
+      { id: 'zipup-black-xl', size: 'XL', color: 'Black', colorHex: '#1a1a1a', printfulSyncVariantId: '694f5a13516757', inStock: true },
+      { id: 'zipup-black-2xl', size: '2XL', color: 'Black', colorHex: '#1a1a1a', printfulSyncVariantId: '694f5a135167d4', inStock: true },
+      // Classic Navy
+      { id: 'zipup-navy-s', size: 'S', color: 'Classic Navy', colorHex: '#1e2a3a', printfulSyncVariantId: '694f5a13516861', inStock: true },
+      { id: 'zipup-navy-m', size: 'M', color: 'Classic Navy', colorHex: '#1e2a3a', printfulSyncVariantId: '694f5a135168e1', inStock: true },
+      { id: 'zipup-navy-l', size: 'L', color: 'Classic Navy', colorHex: '#1e2a3a', printfulSyncVariantId: '694f5a13516964', inStock: true },
+      { id: 'zipup-navy-xl', size: 'XL', color: 'Classic Navy', colorHex: '#1e2a3a', printfulSyncVariantId: '694f5a135169e8', inStock: true },
+      { id: 'zipup-navy-2xl', size: '2XL', color: 'Classic Navy', colorHex: '#1e2a3a', printfulSyncVariantId: '694f5a13516a69', inStock: true },
+      // Charcoal Heather
+      { id: 'zipup-charcoal-s', size: 'S', color: 'Charcoal Heather', colorHex: '#4a4a4a', printfulSyncVariantId: '694f5a13516ae1', inStock: true },
+      { id: 'zipup-charcoal-m', size: 'M', color: 'Charcoal Heather', colorHex: '#4a4a4a', printfulSyncVariantId: '694f5a13516b73', inStock: true },
+      { id: 'zipup-charcoal-l', size: 'L', color: 'Charcoal Heather', colorHex: '#4a4a4a', printfulSyncVariantId: '694f5a13516bf1', inStock: true },
+      { id: 'zipup-charcoal-xl', size: 'XL', color: 'Charcoal Heather', colorHex: '#4a4a4a', printfulSyncVariantId: '694f5a13516c73', inStock: true },
+      { id: 'zipup-charcoal-2xl', size: '2XL', color: 'Charcoal Heather', colorHex: '#4a4a4a', printfulSyncVariantId: '694f5a13516cf4', inStock: true },
+      // Alpine Green
+      { id: 'zipup-green-s', size: 'S', color: 'Alpine Green', colorHex: '#2d4a3e', printfulSyncVariantId: '694f5a13516d87', inStock: true },
+      { id: 'zipup-green-m', size: 'M', color: 'Alpine Green', colorHex: '#2d4a3e', printfulSyncVariantId: '694f5a13516e11', inStock: true },
+      { id: 'zipup-green-l', size: 'L', color: 'Alpine Green', colorHex: '#2d4a3e', printfulSyncVariantId: '694f5a13516e92', inStock: true },
+      { id: 'zipup-green-xl', size: 'XL', color: 'Alpine Green', colorHex: '#2d4a3e', printfulSyncVariantId: '694f5a13516f18', inStock: true },
+      { id: 'zipup-green-2xl', size: '2XL', color: 'Alpine Green', colorHex: '#2d4a3e', printfulSyncVariantId: '694f5a13516f93', inStock: true },
     ]
   },
 ];

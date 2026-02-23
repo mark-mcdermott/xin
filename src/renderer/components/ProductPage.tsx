@@ -318,19 +318,12 @@ export const ProductPage: React.FC<ProductPageProps> = ({ slug, onCartClick, onC
                     <li>Shoulder-to-shoulder taping</li>
                   </>
                 )}
-                {product.category === 'hoodie' && product.id === 'xin-youth-hoodie' && (
+                {product.category === 'hoodie' && (
                   <>
-                    <li>50% cotton, 50% polyester</li>
-                    <li>Midweight fleece fabric</li>
-                    <li>Air jet yarn for a softer feel</li>
-                    <li>No drawcords for child safety</li>
-                  </>
-                )}
-                {product.category === 'hoodie' && product.id !== 'xin-youth-hoodie' && (
-                  <>
-                    <li>52% cotton, 48% poly fleece</li>
-                    <li>Heather colors are 60%/40%</li>
-                    <li>Thin, lightweight, soft</li>
+                    <li>80% cotton, 20% polyester fleece</li>
+                    <li>Full-zip with split front pouch pocket</li>
+                    <li>Matching drawcord and metal eyelets</li>
+                    <li>Independently certified for responsible production</li>
                   </>
                 )}
                 {product.category === 'sticker' && (
