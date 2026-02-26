@@ -5,7 +5,7 @@
   <p>A desktop mac app for note-taking and publishing blog posts</p>
 </div>
 
-https://github.com/user-attachments/assets/f0e51ec8-fdf1-4676-ae60-e9661869eac6
+https://github.com/user-attachments/assets/7898dd6a-8798-4846-8e0e-81596a8f353b
 
 ## Features
 
