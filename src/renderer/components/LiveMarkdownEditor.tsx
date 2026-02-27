@@ -2206,6 +2206,7 @@ interface LiveMarkdownEditorProps {
   onPublishRemote?: () => void; // Callback to publish remote file changes
   onTitleChange?: (title: string) => void; // Callback for instant title updates on keystroke
   isDailyNote?: boolean; // Whether this is a daily note (title line is read-only)
+  focusTitleOnMount?: boolean; // Position cursor at start of title text on mount
 }
 
 // Helper to check if a position is inside a === blog block
@@ -2281,7 +2282,8 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   isRemote = false,
   onPublishRemote,
   onTitleChange,
-  isDailyNote = false
+  isDailyNote = false,
+  focusTitleOnMount = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -2294,6 +2296,9 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
 
   const blogsRef = useRef(blogs);
   blogsRef.current = blogs;
+
+  // Tracks whether the title should behave as placeholder text (replaced on first keystroke)
+  const titlePlaceholderActiveRef = useRef(false);
 
   // Add blog names to spellcheck dictionary so they aren't flagged
   useEffect(() => {
@@ -3101,6 +3106,57 @@ tags: [""]
       return tr;
     });
 
+    // When a new note is created, treat the title text as placeholder:
+    // typing a character replaces it; any cursor movement deactivates.
+    const titlePlaceholderFilter = EditorState.transactionFilter.of(tr => {
+      if (!titlePlaceholderActiveRef.current) return tr;
+
+      if (tr.docChanged) {
+        const doc = tr.startState.doc;
+        const line1 = doc.line(1);
+        const prefixMatch = line1.text.match(/^#\s*/);
+        const prefixLen = prefixMatch ? prefixMatch[0].length : 0;
+        const titleStart = line1.from + prefixLen;
+        const titleEnd = line1.to;
+
+        // Check if this is a simple character insertion within the title
+        let insertedText = '';
+        let isInsertAtTitle = false;
+        tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
+          if (fromA >= titleStart && fromA <= titleEnd && toA === fromA) {
+            insertedText = inserted.toString();
+            isInsertAtTitle = true;
+          }
+        });
+
+        if (isInsertAtTitle && insertedText.length > 0 && !insertedText.includes('\n')) {
+          // Replace the placeholder title with the typed character
+          titlePlaceholderActiveRef.current = false;
+          return {
+            changes: { from: titleStart, to: titleEnd, insert: insertedText },
+            selection: { anchor: titleStart + insertedText.length }
+          };
+        }
+
+        // Any other doc change (backspace, enter, etc.) deactivates
+        titlePlaceholderActiveRef.current = false;
+        return tr;
+      }
+
+      // Selection-only change: deactivate if cursor moved from title start
+      if (tr.selection) {
+        const doc = tr.startState.doc;
+        const line1 = doc.line(1);
+        const prefixMatch = line1.text.match(/^#\s*/);
+        const titleStart = line1.from + (prefixMatch ? prefixMatch[0].length : 0);
+        if (tr.selection.main.head !== titleStart) {
+          titlePlaceholderActiveRef.current = false;
+        }
+      }
+
+      return tr;
+    });
+
     // Block edits to the title line (line 1) for daily notes
     const dailyNoteTitleGuard = isDailyNote ? EditorState.transactionFilter.of(tr => {
       if (!tr.docChanged) return tr;
@@ -3116,6 +3172,7 @@ tags: [""]
     const state = EditorState.create({
       doc: initialContent,
       extensions: [
+        titlePlaceholderFilter,
         dailyNoteTitleGuard,
         line2CursorRedirect,
         cursorPositionField,
@@ -3186,6 +3243,16 @@ tags: [""]
 
     viewRef.current = view;
     contentRef.current = initialContent;
+
+    if (focusTitleOnMount) {
+      // Position cursor at the first letter of the title (after "# ")
+      const firstLine = view.state.doc.line(1).text;
+      const prefixMatch = firstLine.match(/^#\s*/);
+      const cursorPos = prefixMatch ? prefixMatch[0].length : 0;
+      titlePlaceholderActiveRef.current = true;
+      view.focus();
+      view.dispatch({ selection: { anchor: cursorPos } });
+    }
 
     return () => {
       // Flush any pending save on unmount so content isn't lost on tab switch

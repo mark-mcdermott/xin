@@ -104,6 +104,11 @@ const App: React.FC = () => {
 
   // Active panel state - tracks which panel is currently displayed
   const [activePanel, setActivePanel] = useState<'file' | 'settings' | 'docs' | 'merch'>('file');
+  // Track newly created file so editor can focus its title
+  const [focusTitlePath, setFocusTitlePath] = useState<string | null>(null);
+  useEffect(() => {
+    if (focusTitlePath) setFocusTitlePath(null);
+  }, [focusTitlePath]);
 
   const canGoBackDocs = docsHistoryIndex > 0;
   const canGoForwardDocs = docsHistoryIndex < docsHistory.length - 1;
@@ -1177,6 +1182,7 @@ const App: React.FC = () => {
       setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
       setActiveTabIndex(openTabs.length);
       setActivePanel('file');
+      setFocusTitlePath(path);
       pushToHistory({ type: 'file', path });
     } catch (err: any) {
       console.error('Failed to create file:', err);
@@ -1385,6 +1391,7 @@ const App: React.FC = () => {
         setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
         setActiveTabIndex(openTabs.length);
         setActivePanel('file');
+        setFocusTitlePath(path);
       } else {
         const path = `${folderPath}/${name}`;
         await createFolder(path);
@@ -2452,6 +2459,7 @@ const App: React.FC = () => {
                   onPublishBlogBlock={handlePublishBlogBlock}
                   onTitleChange={handleTitleChange}
                   isDailyNote={selectedFile?.includes('/daily-notes/') ?? false}
+                  focusTitleOnMount={selectedFile === focusTitlePath}
                 />
               ) : (
                 <MarkdownEditor
