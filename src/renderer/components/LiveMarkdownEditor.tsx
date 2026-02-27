@@ -1397,8 +1397,12 @@ function createDecorations(
           );
         }
         // Hide the # markers unless cursor is on this line (keep them visible while editing)
-        // Line 1 (title) always hides the # since it's sandboxed as h1
-        if (!cursorOnThisLine || i === 1) {
+        // Line 1 (title): use replace decoration so cursor skips over the hidden "# " entirely
+        if (i === 1) {
+          decorations.push(
+            Decoration.replace({}).range(header.markerFrom, header.markerTo)
+          );
+        } else if (!cursorOnThisLine) {
           decorations.push(
             Decoration.mark({ class: 'cm-hidden-marker' }).range(header.markerFrom, header.markerTo)
           );
@@ -3072,29 +3076,50 @@ tags: [""]
     });
 
     // Skip line 2 (spacer below title) — redirect cursor to line 3
+    // Also redirect cursor landing inside the hidden "# " marker on line 1 to the title text start
     // Only for navigation (clicks, arrow keys), not during edits (Enter inserts a new line)
     const line2CursorRedirect = EditorState.transactionFilter.of(tr => {
       if (tr.docChanged) return tr;
       const doc = tr.newDoc;
-      if (doc.lines < 3) return tr;
       const line1 = doc.line(1);
       if (!line1.text.startsWith('# ')) return tr;
-      const line2 = doc.line(2);
-      if (line2.text !== '') return tr; // Only skip if line 2 is the empty spacer
-      const line3 = doc.line(3);
+
+      // Find where the title text starts (after "# ")
+      const prefixMatch = line1.text.match(/^#\s*/);
+      const titleStart = prefixMatch ? line1.from + prefixMatch[0].length : line1.from;
+
       const sel = tr.newSelection;
       let needsRedirect = false;
       const ranges = sel.ranges.map(range => {
         let newHead = range.head;
         let newAnchor = range.anchor;
-        if (newHead >= line2.from && newHead <= line2.to) {
+
+        // Redirect cursor inside the hidden "# " marker to the title text start
+        if (newHead >= line1.from && newHead < titleStart) {
           needsRedirect = true;
-          newHead = line3.from;
+          newHead = titleStart;
         }
-        if (newAnchor >= line2.from && newAnchor <= line2.to) {
+        if (newAnchor >= line1.from && newAnchor < titleStart) {
           needsRedirect = true;
-          newAnchor = line3.from;
+          newAnchor = titleStart;
         }
+
+        // Redirect cursor on line 2 (spacer) to line 3
+        if (doc.lines >= 3) {
+          const line2 = doc.line(2);
+          if (line2.text === '') {
+            const line3 = doc.line(3);
+            if (newHead >= line2.from && newHead <= line2.to) {
+              needsRedirect = true;
+              newHead = line3.from;
+            }
+            if (newAnchor >= line2.from && newAnchor <= line2.to) {
+              needsRedirect = true;
+              newAnchor = line3.from;
+            }
+          }
+        }
+
         if (needsRedirect) {
           return EditorSelection.range(newAnchor, newHead);
         }
