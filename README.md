@@ -45,7 +45,7 @@ https://github.com/user-attachments/assets/7898dd6a-8798-4846-8e0e-81596a8f353b
 ### Motivation
 I used to write notes, both personal and work related, in Obsidian. I write everything each day in one daily note, but I need to be able to easily delete an entire tag's content throughout the whole app without losing the rest of the daily notes. I also need a desktop CMS that has one-click publishing with a progress bar. Obsidian sort of did some of this, but not by default and not gracefully. So I built Xin.
 
-### Vibe Coded
+### Claude Coded
 I vibe coded the Xin MVP in Claude over two weeks of evenings and weekends. Over the next month I used Claude and added more features, refined micro-interactions, etc. The process taught me a lot about TypeScript, Electron, CodeMirror and coding for e-commerce.
 
 ### Support
