@@ -321,7 +321,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({ slug, onCartClick, onC
                 {product.category === 'hoodie' && (
                   <>
                     <li>80% cotton, 20% polyester fleece</li>
-                    <li>Full-zip with split front pouch pocket</li>
+                    <li>{product.slug.includes('zip') ? 'Full-zip with split front pouch pocket' : 'Kangaroo pouch pocket'}</li>
                     <li>Matching drawcord and metal eyelets</li>
                     <li>Independently certified for responsible production</li>
                   </>
