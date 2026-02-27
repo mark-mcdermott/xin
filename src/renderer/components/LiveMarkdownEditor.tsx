@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback, useMemo } from 'react';
-import { EditorState, StateField, Text, Range } from '@codemirror/state';
+import { EditorState, EditorSelection, StateField, Text, Range } from '@codemirror/state';
 import {
   EditorView,
   Decoration,
@@ -2892,6 +2892,14 @@ tags: [""]
             return true;
           }
 
+          // On title line (line 1): skip spacer line 2 and jump to line 3
+          if (line.number === 1 && doc.lines >= 3 && doc.line(2).text === '') {
+            view.dispatch({
+              selection: { anchor: doc.line(3).from }
+            });
+            return true;
+          }
+
           // Default: insert newline with no indentation
           view.dispatch({
             changes: { from: pos, insert: '\n' },
@@ -3058,6 +3066,41 @@ tags: [""]
       }
     });
 
+    // Skip line 2 (spacer below title) — redirect cursor to line 3
+    // Only for navigation (clicks, arrow keys), not during edits (Enter inserts a new line)
+    const line2CursorRedirect = EditorState.transactionFilter.of(tr => {
+      if (tr.docChanged) return tr;
+      const doc = tr.newDoc;
+      if (doc.lines < 3) return tr;
+      const line1 = doc.line(1);
+      if (!line1.text.startsWith('# ')) return tr;
+      const line2 = doc.line(2);
+      if (line2.text !== '') return tr; // Only skip if line 2 is the empty spacer
+      const line3 = doc.line(3);
+      const sel = tr.newSelection;
+      let needsRedirect = false;
+      const ranges = sel.ranges.map(range => {
+        let newHead = range.head;
+        let newAnchor = range.anchor;
+        if (newHead >= line2.from && newHead <= line2.to) {
+          needsRedirect = true;
+          newHead = line3.from;
+        }
+        if (newAnchor >= line2.from && newAnchor <= line2.to) {
+          needsRedirect = true;
+          newAnchor = line3.from;
+        }
+        if (needsRedirect) {
+          return EditorSelection.range(newAnchor, newHead);
+        }
+        return range;
+      });
+      if (needsRedirect) {
+        return [tr, { selection: EditorSelection.create(ranges, sel.mainIndex) }];
+      }
+      return tr;
+    });
+
     // Block edits to the title line (line 1) for daily notes
     const dailyNoteTitleGuard = isDailyNote ? EditorState.transactionFilter.of(tr => {
       if (!tr.docChanged) return tr;
@@ -3069,10 +3112,12 @@ tags: [""]
       return touchesLine1 ? [] : tr;
     }) : [];
 
+
     const state = EditorState.create({
       doc: initialContent,
       extensions: [
         dailyNoteTitleGuard,
+        line2CursorRedirect,
         cursorPositionField,
         history(),
         listBackspaceKeymap,

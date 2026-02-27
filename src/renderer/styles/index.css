@@ -657,6 +657,7 @@ code {
   caret-color: var(--editor-cursor) !important;
 }
 
+
 /* Focus ring styling - only for keyboard navigation */
 *:focus-visible {
   outline: 2px solid var(--focus-ring);
