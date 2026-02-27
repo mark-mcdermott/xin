@@ -28,6 +28,9 @@ interface FileTreeNodeProps {
   onFolderToggle?: (path: string, expanded: boolean) => void;
   selectedFile?: string | null;
   displayNames?: Map<string, string>;
+  multiSelectedPaths?: Set<string>;
+  onFileClickWithShift?: (path: string, event: React.MouseEvent) => void;
+  onDeleteSelected?: () => void;
 }
 
 const FileTreeNode: React.FC<FileTreeNodeProps> = ({
@@ -55,7 +58,10 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
   expandedPaths,
   onFolderToggle,
   selectedFile,
-  displayNames
+  displayNames,
+  multiSelectedPaths,
+  onFileClickWithShift,
+  onDeleteSelected
 }) => {
   const isRemote = node.source === 'remote';
   const isActive = node.type === 'file' && selectedFile === node.path;
@@ -65,7 +71,9 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
   const isExpanded = expandedPaths ? expandedPaths.has(node.path) : localExpanded;
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const handleClick = () => {
+  const isMultiSelected = node.type === 'file' && multiSelectedPaths?.has(node.path);
+
+  const handleClick = (e: React.MouseEvent) => {
     if (node.type === 'folder') {
       // Only use controlled mode when expandedPaths is provided
       if (expandedPaths !== undefined && onFolderToggle) {
@@ -73,6 +81,8 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
       } else {
         setLocalExpanded(!localExpanded);
       }
+    } else if (onFileClickWithShift) {
+      onFileClickWithShift(node.path, e);
     } else if (isRemote && node.remoteMeta) {
       // Handle remote file click
       // Extract the actual path from the remote path format "remote:blogId:path"
@@ -155,14 +165,18 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
         }
       }
     } else {
-      const result = await window.electronAPI.contextMenu.showFileMenu(node.path, { isRemote });
+      const isMultiSel = multiSelectedPaths && multiSelectedPaths.size > 1 && multiSelectedPaths.has(node.path);
+      const selectedCount = isMultiSel ? multiSelectedPaths.size : 1;
+      const result = await window.electronAPI.contextMenu.showFileMenu(node.path, { isRemote, selectedCount });
       if (result) {
         switch (result.action) {
           case 'rename':
             onStartRename?.(node.path);
             break;
           case 'delete':
-            if (isRemote && node.remoteMeta) {
+            if (isMultiSel && onDeleteSelected) {
+              onDeleteSelected();
+            } else if (isRemote && node.remoteMeta) {
               // For remote files, call onDeleteRemote with the file info
               const actualPath = node.path.replace(`remote:${node.remoteMeta.blogId}:`, '');
               onDeleteRemote?.(node.remoteMeta.blogId, actualPath, node.remoteMeta.sha, node.name);
@@ -266,8 +280,8 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
               />
             )}
             <span className="truncate" style={{
-              color: isActive ? 'var(--accent-primary)' : isRemote && node.type === 'folder' ? 'var(--accent-primary)' : undefined,
-              fontWeight: isActive ? 600 : undefined
+              color: (isActive || isMultiSelected) ? 'var(--accent-primary)' : isRemote && node.type === 'folder' ? 'var(--accent-primary)' : undefined,
+              fontWeight: (isActive || isMultiSelected) ? 600 : undefined
             }}>
               {displayNames?.get(node.path) || node.name.replace('.md', '')}
             </span>
@@ -332,6 +346,9 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
                   onFolderToggle={onFolderToggle}
                   selectedFile={selectedFile}
                   displayNames={displayNames}
+                  multiSelectedPaths={multiSelectedPaths}
+                  onFileClickWithShift={onFileClickWithShift}
+                  onDeleteSelected={onDeleteSelected}
                 />
               );
             });
@@ -596,6 +613,111 @@ export const FileTree: React.FC<FileTreeComponentProps> = ({
 }) => {
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
+  const [multiSelectedPaths, setMultiSelectedPaths] = useState<Set<string>>(new Set());
+  const [lastClickedPath, setLastClickedPath] = useState<string | null>(null);
+
+  // Clear multi-select when tree changes
+  useEffect(() => {
+    setMultiSelectedPaths(new Set());
+  }, [tree]);
+
+  // Find sibling file nodes for a given path by searching the tree
+  const getSiblingsForPath = (filePath: string): FileNode[] | null => {
+    const parentDir = filePath.substring(0, filePath.lastIndexOf('/'));
+
+    const searchChildren = (nodes: FileNode[]): FileNode[] | null => {
+      for (const node of nodes) {
+        if (node.type === 'folder') {
+          // Check if this folder's path matches the parent directory
+          if (node.path === parentDir && node.children) {
+            return node.children.filter(c => c.type === 'file');
+          }
+          // Recurse into subfolders
+          if (node.children) {
+            const result = searchChildren(node.children);
+            if (result) return result;
+          }
+        }
+      }
+      return null;
+    };
+
+    // Check if the file is a direct child of the local tree root
+    if (tree && tree.path === parentDir && tree.children) {
+      return tree.children.filter(c => c.type === 'file');
+    }
+    // Search local tree
+    if (tree?.children) {
+      const result = searchChildren(tree.children);
+      if (result) return result;
+    }
+    // Search remote folders
+    if (remoteFolders) {
+      for (const folder of remoteFolders) {
+        if (folder.path === parentDir && folder.children) {
+          return folder.children.filter(c => c.type === 'file');
+        }
+        if (folder.children) {
+          const result = searchChildren(folder.children);
+          if (result) return result;
+        }
+      }
+    }
+    return null;
+  };
+
+  const handleFileClickWithMultiSelect = (path: string, event: React.MouseEvent) => {
+    if (event.shiftKey && lastClickedPath) {
+      // Check if both paths share the same parent folder
+      const parentA = lastClickedPath.substring(0, lastClickedPath.lastIndexOf('/'));
+      const parentB = path.substring(0, path.lastIndexOf('/'));
+
+      if (parentA === parentB) {
+        const siblings = getSiblingsForPath(path);
+        if (siblings) {
+          const indexA = siblings.findIndex(s => s.path === lastClickedPath);
+          const indexB = siblings.findIndex(s => s.path === path);
+          if (indexA !== -1 && indexB !== -1) {
+            const start = Math.min(indexA, indexB);
+            const end = Math.max(indexA, indexB);
+            const selected = new Set<string>();
+            for (let i = start; i <= end; i++) {
+              selected.add(siblings[i].path);
+            }
+            setMultiSelectedPaths(selected);
+            return; // Don't open the file
+          }
+        }
+      }
+      // Fall through to normal click if cross-folder or not found
+    }
+
+    // Normal click: clear multi-select, set anchor, open file
+    setMultiSelectedPaths(new Set());
+    setLastClickedPath(path);
+
+    // Determine if it's a remote file and route accordingly
+    // Check remote folders for remote file detection
+    const isRemotePath = path.startsWith('remote:');
+    if (isRemotePath && remoteFolders) {
+      // Extract blogId and actual path from "remote:blogId:path" format
+      const parts = path.split(':');
+      if (parts.length >= 3) {
+        const blogId = parts[1];
+        const actualPath = parts.slice(2).join(':');
+        onRemoteFileClick?.(blogId, actualPath);
+        return;
+      }
+    }
+    onFileClick?.(path);
+  };
+
+  const handleDeleteSelected = () => {
+    for (const path of multiSelectedPaths) {
+      onDelete?.(path, 'file');
+    }
+    setMultiSelectedPaths(new Set());
+  };
 
   if (!tree) {
     return (
@@ -692,6 +814,9 @@ export const FileTree: React.FC<FileTreeComponentProps> = ({
               onFolderToggle={onFolderToggle}
               selectedFile={selectedFile}
               displayNames={displayNames}
+              multiSelectedPaths={multiSelectedPaths}
+              onFileClickWithShift={handleFileClickWithMultiSelect}
+              onDeleteSelected={handleDeleteSelected}
             />
           ))}
           {/* Separator between remote and local files */}
@@ -739,6 +864,9 @@ export const FileTree: React.FC<FileTreeComponentProps> = ({
               onFolderToggle={onFolderToggle}
               selectedFile={selectedFile}
               displayNames={displayNames}
+              multiSelectedPaths={multiSelectedPaths}
+              onFileClickWithShift={handleFileClickWithMultiSelect}
+              onDeleteSelected={handleDeleteSelected}
             />
           );
         });

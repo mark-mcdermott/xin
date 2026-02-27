@@ -5,8 +5,10 @@ import { ipcMain, Menu, BrowserWindow } from 'electron';
  */
 export function registerContextMenuHandlers(): void {
   // Show file context menu
-  ipcMain.handle('context-menu:show-file', async (_event, filePath: string, options?: { isRemote?: boolean }) => {
+  ipcMain.handle('context-menu:show-file', async (_event, filePath: string, options?: { isRemote?: boolean; selectedCount?: number }) => {
     return new Promise<{ action: string } | null>((resolve) => {
+      const count = options?.selectedCount ?? 1;
+      const deleteLabel = count > 1 ? `Delete ${count} notes` : 'Delete';
       const menu = Menu.buildFromTemplate([
         {
           label: 'Rename',
@@ -14,7 +16,7 @@ export function registerContextMenuHandlers(): void {
         },
         { type: 'separator' },
         {
-          label: 'Delete',
+          label: deleteLabel,
           click: () => resolve({ action: 'delete' })
         }
       ]);

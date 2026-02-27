@@ -99,7 +99,7 @@ export interface ElectronAPI {
 
   // Context menu operations
   contextMenu: {
-    showFileMenu: (filePath: string, options?: { isRemote?: boolean }) => Promise<{ action: string } | null>;
+    showFileMenu: (filePath: string, options?: { isRemote?: boolean; selectedCount?: number }) => Promise<{ action: string } | null>;
     showFolderMenu: (folderPath: string) => Promise<{ action: string } | null>;
     showSidebarMenu: () => Promise<{ action: string } | null>;
   };
