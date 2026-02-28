@@ -1,6 +1,11 @@
 import { app, BrowserWindow, nativeImage, ipcMain, shell } from 'electron';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { autoUpdater } from 'electron-updater'
+import log from 'electron-log'
+
+log.transports.file.level = 'info'
+autoUpdater.logger = log
 
 // Get the app icon path (works in both dev and production)
 const getIconPath = (): string => {
@@ -105,6 +110,25 @@ ipcMain.handle('shell:open-external', async (_event, url: string) => {
 // Set app name (shows in menu bar on macOS)
 app.setName('Xin');
 
+function initAutoUpdate() {
+  // Only run in production builds
+  if (process.env.VITE_DEV_SERVER_URL) return
+
+  autoUpdater.on('checking-for-update', () => log.info('Checking for update...'))
+  autoUpdater.on('update-available', info => log.info('Update available:', info.version))
+  autoUpdater.on('update-not-available', () => log.info('No updates available'))
+  autoUpdater.on('error', err => log.error('Updater error:', err))
+  autoUpdater.on('download-progress', p => log.info(`Download speed: ${p.bytesPerSecond}`))
+  autoUpdater.on('update-downloaded', () => log.info('Update downloaded'))
+
+  autoUpdater.checkForUpdatesAndNotify()
+
+  // Optional: periodic checks every 6 hours
+  setInterval(() => {
+    autoUpdater.checkForUpdatesAndNotify()
+  }, 1000 * 60 * 60 * 6)
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows
 app.whenReady().then(async () => {
@@ -151,6 +175,7 @@ app.whenReady().then(async () => {
   }
 
   createWindow();
+  initAutoUpdate();
 
   // Notify renderer of env setup results after window finishes loading
   if (envSetupResult && (envSetupResult.imported.length > 0 || envSetupResult.errors.length > 0)) {
