@@ -1,7 +1,7 @@
 {
   "name": "xin",
-  "version": "0.0.1",
-  "description": "A lightweight desktop note-taking app for macOS, inspired by Obsidian.",
+  "version": "0.0.2",
+  "description": "A lightweight desktop note-taking app and CMS",
   "type": "module",
   "packageManager": "pnpm@10.28.2",
   "main": "dist/main/index.js",
@@ -42,9 +42,11 @@
           "arch": "universal"
         }
       ],
-      "identity": null,
-      "hardenedRuntime": false,
+      "hardenedRuntime": true,
       "gatekeeperAssess": false
+    },
+    "dmg": {
+      "sign": true
     }
   },
   "pnpm": {
