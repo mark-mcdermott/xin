@@ -1707,13 +1707,14 @@ function createLivePreviewPlugin(
 
 const editorTheme = EditorView.theme({
   '&': {
-    fontSize: '14px',
+    fontSize: '16px',
     height: '100%'
   },
   '.cm-content': {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif',
+    fontWeight: '500',
     padding: '40px 48px 24px 48px',
-    lineHeight: '1.75'
+    lineHeight: '1.25'
   },
   '.cm-line': {
     padding: '2px 0'
