@@ -23,26 +23,25 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ path, onNavigate, displa
   });
 
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto" style={{ fontSize: '13.75px', color: 'var(--breadcrumb-text)' }}>
-      {/* Path segments */}
+    <p className="overflow-x-auto whitespace-nowrap" style={{ fontSize: '13.75px', color: 'var(--breadcrumb-text)', margin: 0 }}>
       {pathSegments.map((segment, index) => (
         <React.Fragment key={segment.path}>
-          {index > 0 && <span className="flex-shrink-0" style={{ color: 'var(--breadcrumb-separator)', marginRight: '4px' }}>/</span>}
+          {index > 0 && (
+            <span style={{ color: 'var(--breadcrumb-separator)', margin: '0 6px' }}>/</span>
+          )}
           {segment.isLast ? (
-            <span className="truncate" style={{ color: 'var(--breadcrumb-text)', marginLeft: '1px' }}>
-              {displayName || segment.name}
-            </span>
+            <span>{displayName || segment.name}</span>
           ) : (
             <button
               onClick={() => onNavigate?.(segment.path)}
-              className="transition-all truncate hover:opacity-60"
-              style={{ color: 'var(--breadcrumb-text)', cursor: onNavigate ? 'pointer' : 'default' }}
+              className="transition-all hover:opacity-60"
+              style={{ color: 'var(--breadcrumb-text)', cursor: onNavigate ? 'pointer' : 'default', padding: 0, border: 'none', background: 'none', font: 'inherit' }}
             >
               {segment.name}
             </button>
           )}
         </React.Fragment>
       ))}
-    </div>
+    </p>
   );
 };
