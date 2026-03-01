@@ -3278,6 +3278,8 @@ tags: [""]
         // Spell check underlines
         spellCheckLinter,
         spellCheckTheme,
+        // Disable native browser spellcheck (we use our own via Typo.js)
+        EditorView.contentAttributes.of({ spellcheck: 'false' }),
         editorTheme,
         paddingTheme,
         updateListener,

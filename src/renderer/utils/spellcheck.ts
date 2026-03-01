@@ -378,10 +378,13 @@ export function spellCheckCompletionSource(context: CompletionContext) {
     label: `Add "${word}" to dictionary`,
     type: 'keyword',
     boost: -1,
-    apply: (view) => {
+    apply: (view, _completion, from, to) => {
       addToCustomDictionary(word);
+      // Replace word with itself to force a doc change — this closes the
+      // autocomplete popup and triggers the linter to re-run (which will
+      // now see the word in the custom dictionary and remove the underline).
       view.dispatch({
-        effects: triggerSpellCheck.of(true)
+        changes: { from, to, insert: word }
       });
     }
   });
