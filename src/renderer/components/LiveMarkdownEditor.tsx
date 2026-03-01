@@ -2209,6 +2209,9 @@ interface LiveMarkdownEditorProps {
   isRemote?: boolean; // Whether this is a remote CMS file
   onPublishRemote?: () => void; // Callback to publish remote file changes
   onTitleChange?: (title: string) => void; // Callback for instant title updates on keystroke
+  onTitleBlur?: () => void; // Called when cursor leaves the title line (line 1)
+  revertTitle?: string | null; // When set, replaces the title line with this value
+  onTitleReverted?: () => void; // Called after revertTitle has been applied
   isDailyNote?: boolean; // Whether this is a daily note (title line is read-only)
   focusTitleOnMount?: boolean; // Position cursor at start of title text on mount
 }
@@ -2286,6 +2289,9 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   isRemote = false,
   onPublishRemote,
   onTitleChange,
+  onTitleBlur,
+  revertTitle,
+  onTitleReverted,
   isDailyNote = false,
   focusTitleOnMount = false
 }) => {
@@ -2325,6 +2331,12 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
 
   const onTitleChangeRef = useRef(onTitleChange);
   onTitleChangeRef.current = onTitleChange;
+
+  const onTitleBlurRef = useRef(onTitleBlur);
+  onTitleBlurRef.current = onTitleBlur;
+
+  const onTitleRevertedRef = useRef(onTitleReverted);
+  onTitleRevertedRef.current = onTitleReverted;
 
   // Create padding override theme if custom padding is provided
   const paddingTheme = useMemo(() => {
@@ -2962,8 +2974,19 @@ tags: [""]
     ]);
 
     let pendingMouseClick = false;
+    let prevCursorLine = 0;
 
     const updateListener = EditorView.updateListener.of(update => {
+      // Detect cursor leaving title line (line 1) or editor losing focus while on line 1
+      const cursorLine = update.state.doc.lineAt(update.state.selection.main.head).number;
+      if (prevCursorLine === 1 && cursorLine !== 1) {
+        onTitleBlurRef.current?.();
+      }
+      if (update.focusChanged && !update.view.hasFocus && cursorLine === 1) {
+        onTitleBlurRef.current?.();
+      }
+      prevCursorLine = cursorLine;
+
       if (update.docChanged) {
         // Instant title extraction for live UI updates
         const firstLine = update.state.doc.line(1).text;
@@ -3294,6 +3317,18 @@ tags: [""]
     };
     // Note: onPublishBlogBlock and blogs are accessed via refs to avoid recreating editor
   }, [getBlogBlockTemplate, wikilinkCompletionSource, blogCompletionSource, atBlogCompletionSource, paddingTheme]);
+
+  // Revert title line when triggered by parent (duplicate title detected)
+  useEffect(() => {
+    if (revertTitle && viewRef.current) {
+      const line1 = viewRef.current.state.doc.line(1);
+      viewRef.current.dispatch({
+        changes: { from: 0, to: line1.to, insert: `# ${revertTitle}` }
+      });
+      // The dispatch triggers updateListener which calls onTitleChange with the new title
+      onTitleRevertedRef.current?.();
+    }
+  }, [revertTitle]);
 
   // Update content when file changes externally (not from our own save)
   useEffect(() => {
