@@ -166,7 +166,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
         padding: '12px 16px',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
         display: 'flex',
-        alignItems: 'flex-start',
+        alignItems: toast.message ? 'flex-start' : 'center',
         gap: '12px',
         animation: isLeaving ? 'toastOut 0.2s ease-out forwards' : 'toastIn 0.2s ease-out forwards',
       }}
@@ -193,7 +193,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
           }
         }
       `}</style>
-      <div style={{ flexShrink: 0, marginTop: '2px' }}>
+      <div style={{ flexShrink: 0 }}>
         {getIcon()}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>

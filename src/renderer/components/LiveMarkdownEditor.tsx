@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { EditorState, EditorSelection, StateField, Text, Range } from '@codemirror/state';
 import {
   EditorView,
@@ -1707,13 +1707,14 @@ function createLivePreviewPlugin(
 
 const editorTheme = EditorView.theme({
   '&': {
-    fontSize: '14px',
+    fontSize: '16px',
     height: '100%'
   },
   '.cm-content': {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif',
+    fontWeight: '500',
     padding: '40px 48px 24px 48px',
-    lineHeight: '1.75'
+    lineHeight: '1.25'
   },
   '.cm-line': {
     padding: '2px 0'
@@ -2209,6 +2210,9 @@ interface LiveMarkdownEditorProps {
   isRemote?: boolean; // Whether this is a remote CMS file
   onPublishRemote?: () => void; // Callback to publish remote file changes
   onTitleChange?: (title: string) => void; // Callback for instant title updates on keystroke
+  onTitleBlur?: () => void; // Called when cursor leaves the title line (line 1)
+  revertTitle?: string | null; // When set, replaces the title line with this value
+  onTitleReverted?: () => void; // Called after revertTitle has been applied
   isDailyNote?: boolean; // Whether this is a daily note (title line is read-only)
   focusTitleOnMount?: boolean; // Position cursor at start of title text on mount
 }
@@ -2286,6 +2290,9 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   isRemote = false,
   onPublishRemote,
   onTitleChange,
+  onTitleBlur,
+  revertTitle,
+  onTitleReverted,
   isDailyNote = false,
   focusTitleOnMount = false
 }) => {
@@ -2297,6 +2304,10 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   const isSavingRef = useRef(false);
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
+
+  // Link popup state (Cmd+K)
+  const [linkPopup, setLinkPopup] = useState<{ x: number; y: number; from: number; to: number; text: string } | null>(null);
+  const linkInputRef = useRef<HTMLInputElement>(null);
 
   const blogsRef = useRef(blogs);
   blogsRef.current = blogs;
@@ -2325,6 +2336,12 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
 
   const onTitleChangeRef = useRef(onTitleChange);
   onTitleChangeRef.current = onTitleChange;
+
+  const onTitleBlurRef = useRef(onTitleBlur);
+  onTitleBlurRef.current = onTitleBlur;
+
+  const onTitleRevertedRef = useRef(onTitleReverted);
+  onTitleRevertedRef.current = onTitleReverted;
 
   // Create padding override theme if custom padding is provided
   const paddingTheme = useMemo(() => {
@@ -2599,6 +2616,33 @@ tags: [""]
       }
     ]);
 
+    // Link shortcut: Mod-k wraps selected text in a markdown link
+    const linkKeymap = keymap.of([
+      {
+        key: 'Mod-k',
+        run: (view) => {
+          const { from, to } = view.state.selection.main;
+          const selectedText = view.state.sliceDoc(from, to);
+          if (!selectedText) return false;
+
+          // Get coordinates for popup positioning
+          const coords = view.coordsAtPos(from);
+          if (!coords || !containerRef.current) return false;
+          const containerRect = containerRef.current.getBoundingClientRect();
+          setLinkPopup({
+            x: coords.left - containerRect.left,
+            y: coords.bottom - containerRect.top + 4,
+            from,
+            to,
+            text: selectedText
+          });
+          // Focus the input after React renders
+          setTimeout(() => linkInputRef.current?.focus(), 0);
+          return true;
+        }
+      }
+    ]);
+
     // Tab key handler for smart navigation in frontmatter
     const tabKeymap = keymap.of([
       {
@@ -2830,6 +2874,42 @@ tags: [""]
           const pos = view.state.selection.main.head;
           const doc = view.state.doc;
           const line = doc.lineAt(pos);
+
+          // Check if cursor is inside a code block — if so, select only that block's content
+          let codeStart = -1;
+          for (let i = line.number; i >= 1; i--) {
+            if (doc.line(i).text.startsWith('```')) {
+              codeStart = i;
+              break;
+            }
+          }
+          if (codeStart !== -1) {
+            // Verify it's an opening fence by counting ``` lines before it
+            let fenceCount = 0;
+            for (let i = 1; i < codeStart; i++) {
+              if (doc.line(i).text.startsWith('```')) fenceCount++;
+            }
+            // Even count means this is an opening fence (cursor is inside a code block)
+            if (fenceCount % 2 === 0) {
+              // Find the closing fence
+              let codeEnd = -1;
+              for (let i = line.number; i <= doc.lines; i++) {
+                if (i !== codeStart && doc.line(i).text.startsWith('```')) {
+                  codeEnd = i;
+                  break;
+                }
+              }
+              if (codeEnd !== -1) {
+                const contentStart = doc.line(codeStart + 1).from;
+                const contentEnd = doc.line(codeEnd - 1).to;
+                if (contentStart <= contentEnd) {
+                  view.dispatch({ selection: { anchor: contentStart, head: contentEnd } });
+                  return true;
+                }
+              }
+            }
+          }
+
           if (line.number === 1) {
             // Title: select only the title text, preserving the "# " marker
             const line1 = doc.line(1);
@@ -2962,8 +3042,19 @@ tags: [""]
     ]);
 
     let pendingMouseClick = false;
+    let prevCursorLine = 0;
 
     const updateListener = EditorView.updateListener.of(update => {
+      // Detect cursor leaving title line (line 1) or editor losing focus while on line 1
+      const cursorLine = update.state.doc.lineAt(update.state.selection.main.head).number;
+      if (prevCursorLine === 1 && cursorLine !== 1) {
+        onTitleBlurRef.current?.();
+      }
+      if (update.focusChanged && !update.view.hasFocus && cursorLine === 1) {
+        onTitleBlurRef.current?.();
+      }
+      prevCursorLine = cursorLine;
+
       if (update.docChanged) {
         // Instant title extraction for live UI updates
         const firstLine = update.state.doc.line(1).text;
@@ -3210,6 +3301,7 @@ tags: [""]
         spellCheckKeymap, // Cmd+. to show spelling suggestions
         keymap.of([...defaultKeymap, ...historyKeymap]),
         saveKeymap,
+        linkKeymap,
         markdown(),
         autocompletion({
           override: [wikilinkCompletionSource, blogCompletionSource, atBlogCompletionSource, spellCheckCompletionSource],
@@ -3254,6 +3346,8 @@ tags: [""]
         // Spell check underlines
         spellCheckLinter,
         spellCheckTheme,
+        // Disable native browser spellcheck (we use our own via Typo.js)
+        EditorView.contentAttributes.of({ spellcheck: 'false' }),
         editorTheme,
         paddingTheme,
         updateListener,
@@ -3294,6 +3388,18 @@ tags: [""]
     };
     // Note: onPublishBlogBlock and blogs are accessed via refs to avoid recreating editor
   }, [getBlogBlockTemplate, wikilinkCompletionSource, blogCompletionSource, atBlogCompletionSource, paddingTheme]);
+
+  // Revert title line when triggered by parent (duplicate title detected)
+  useEffect(() => {
+    if (revertTitle && viewRef.current) {
+      const line1 = viewRef.current.state.doc.line(1);
+      viewRef.current.dispatch({
+        changes: { from: 0, to: line1.to, insert: `# ${revertTitle}` }
+      });
+      // The dispatch triggers updateListener which calls onTitleChange with the new title
+      onTitleRevertedRef.current?.();
+    }
+  }, [revertTitle]);
 
   // Update content when file changes externally (not from our own save)
   useEffect(() => {
@@ -3668,13 +3774,84 @@ tags: [""]
     }
   }, []);
 
+  const handleLinkSubmit = useCallback((url: string) => {
+    if (!linkPopup || !viewRef.current) return;
+    let finalUrl = url.trim();
+    if (!finalUrl) { setLinkPopup(null); return; }
+    if (isExternalUrl(finalUrl) && !/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = 'https://' + finalUrl;
+    }
+    const replacement = `[${linkPopup.text}](${finalUrl}) `;
+    const cursorPos = linkPopup.from + replacement.length;
+    viewRef.current.dispatch({
+      changes: { from: linkPopup.from, to: linkPopup.to, insert: replacement },
+      selection: { anchor: cursorPos }
+    });
+    setLinkPopup(null);
+    viewRef.current.focus();
+  }, [linkPopup]);
+
   return (
-    <div
-      ref={containerRef}
-      className="h-full w-full overflow-hidden"
-      style={{ backgroundColor: 'var(--bg-primary)' }}
-      onMouseDown={handleMouseDown}
-      onClick={handleClick}
-    />
+    <div className="relative h-full w-full overflow-hidden">
+      <div
+        ref={containerRef}
+        className="h-full w-full overflow-hidden"
+        style={{ backgroundColor: 'var(--bg-primary)' }}
+        onMouseDown={handleMouseDown}
+        onClick={handleClick}
+      />
+      {linkPopup && (
+        <div
+          className="absolute z-50"
+          style={{
+            left: linkPopup.x,
+            top: linkPopup.y,
+            backgroundColor: 'var(--dialog-bg)',
+            border: '1px solid var(--border-light)',
+            borderRadius: 8,
+            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+            padding: 4
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <input
+            ref={linkInputRef}
+            type="text"
+            placeholder="Paste link"
+            className="cm-link-popup-input"
+            style={{
+              display: 'block',
+              width: 'auto',
+              minWidth: 140,
+              padding: '8px 12px',
+              margin: 0,
+              borderRadius: 6,
+              backgroundColor: 'var(--sidebar-hover)',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif',
+              fontSize: 14,
+              fontWeight: 500,
+              color: 'var(--accent-primary)',
+              lineHeight: '1.4',
+              caretColor: 'var(--accent-primary)',
+              border: 'none',
+              outline: 'none',
+              boxSizing: 'border-box',
+              textAlign: 'left'
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleLinkSubmit((e.target as HTMLInputElement).value);
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                setLinkPopup(null);
+                viewRef.current?.focus();
+              }
+            }}
+            onBlur={() => setLinkPopup(null)}
+          />
+        </div>
+      )}
+    </div>
   );
 };

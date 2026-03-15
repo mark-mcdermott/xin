@@ -195,6 +195,11 @@ const App: React.FC = () => {
   // Guard against concurrent auto-renames
   const isRenamingRef = useRef(false);
 
+  // Duplicate title detection state
+  const duplicateTitleFileRef = useRef<string | null>(null);
+  const duplicateToastIdRef = useRef<string | null>(null);
+  const [revertTitle, setRevertTitle] = useState<string | null>(null);
+
   // Blog block publish progress state
   const [blogBlockPublishJobId, setBlogBlockPublishJobId] = useState<string | null>(null);
 
@@ -453,6 +458,9 @@ const App: React.FC = () => {
     setExpandedPaths(newExpandedPaths);
   }, [sidebarTab]);
 
+  // Toast notifications
+  const { showToast, hideToast } = useToast();
+
   // Handle instant title changes from the editor
   const handleTitleChange = useCallback((title: string) => {
     if (!selectedFile) return;
@@ -465,7 +473,81 @@ const App: React.FC = () => {
       }
       return next;
     });
-  }, [selectedFile]);
+
+    // Check for duplicate title (skip daily notes — they don't auto-rename)
+    const isDailyNote = selectedFile.includes('/daily-notes/');
+    if (isDailyNote || !title) {
+      if (duplicateTitleFileRef.current) {
+        duplicateTitleFileRef.current = null;
+        if (duplicateToastIdRef.current) {
+          hideToast(duplicateToastIdRef.current);
+          duplicateToastIdRef.current = null;
+        }
+      }
+      return;
+    }
+
+    const safeName = title.replace(/[\/\\:*?"<>|]/g, '-').trim();
+    if (!safeName) {
+      duplicateTitleFileRef.current = null;
+      return;
+    }
+
+    const currentFileName = selectedFile.split('/').pop() ?? '';
+    const targetName = safeName + '.md';
+    let isDuplicate = false;
+    const checkTree = (node: typeof fileTree) => {
+      if (!node) return;
+      if (node.type === 'file' && node.name === targetName && node.name !== currentFileName) {
+        isDuplicate = true;
+      }
+      node.children?.forEach(checkTree);
+    };
+    checkTree(fileTree);
+
+    if (isDuplicate) {
+      if (!duplicateTitleFileRef.current) {
+        if (duplicateToastIdRef.current) {
+          hideToast(duplicateToastIdRef.current);
+        }
+        duplicateToastIdRef.current = showToast({
+          type: 'info',
+          title: 'A note with this title already exists',
+        });
+      }
+      duplicateTitleFileRef.current = selectedFile;
+    } else {
+      if (duplicateTitleFileRef.current) {
+        if (duplicateToastIdRef.current) {
+          hideToast(duplicateToastIdRef.current);
+          duplicateToastIdRef.current = null;
+        }
+      }
+      duplicateTitleFileRef.current = null;
+    }
+  }, [selectedFile, fileTree, showToast, hideToast]);
+
+  // Handle cursor leaving the title line — revert if duplicate
+  const handleTitleBlur = useCallback(() => {
+    if (duplicateTitleFileRef.current && duplicateTitleFileRef.current === selectedFile) {
+      const untitledName = getNextUntitledName('');
+      setRevertTitle(untitledName);
+      setDisplayNames(prev => {
+        const next = new Map(prev);
+        next.set(selectedFile!, untitledName);
+        return next;
+      });
+      duplicateTitleFileRef.current = null;
+      if (duplicateToastIdRef.current) {
+        hideToast(duplicateToastIdRef.current);
+        duplicateToastIdRef.current = null;
+      }
+    }
+  }, [selectedFile, hideToast]);
+
+  const handleTitleReverted = useCallback(() => {
+    setRevertTitle(null);
+  }, []);
 
   // Load today's note on mount
   useEffect(() => {
@@ -484,6 +566,37 @@ const App: React.FC = () => {
     }
   }, [vaultPath, vaultInitialized, getTodayNote]);
 
+  // Check for midnight crossover and create today's daily note
+  useEffect(() => {
+    if (!vaultPath || !vaultInitialized) return;
+
+    const getDateString = () => {
+      const d = new Date();
+      return `${String(d.getFullYear()).slice(-2)}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    let lastDate = getDateString();
+
+    const interval = setInterval(async () => {
+      const currentDate = getDateString();
+      if (currentDate !== lastDate) {
+        lastDate = currentDate;
+        try {
+          const { path, content } = await getTodayNote();
+          setOpenTabs((prev) => [{ type: 'file', id: nextTabId++, path, content }, ...prev]);
+          setActiveTabIndex(0);
+          const dates = await getDailyNoteDates();
+          setDailyNoteDates(dates);
+          await refreshFileTree();
+        } catch (err) {
+          console.error('Failed to create daily note at midnight:', err);
+        }
+      }
+    }, 60_000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [vaultPath, vaultInitialized, getTodayNote, getDailyNoteDates, refreshFileTree]);
+
   // Load daily note dates on mount
   useEffect(() => {
     const loadDates = async () => {
@@ -500,8 +613,7 @@ const App: React.FC = () => {
     }
   }, [vaultPath, getDailyNoteDates]);
 
-  // Toast notifications
-  const { showToast } = useToast();
+
 
   // Load blogs for editor autocomplete
   useEffect(() => {
@@ -1008,11 +1120,29 @@ const App: React.FC = () => {
     const currentTab = openTabs[activeTabIndex];
     if (currentTab?.type !== 'file') return;
 
+    // If title is in duplicate state, revert to Untitled before saving
+    let contentToSave = content;
+    if (duplicateTitleFileRef.current === selectedFile) {
+      const untitledName = getNextUntitledName('');
+      const firstLine = content.split('\n')[0];
+      contentToSave = `# ${untitledName}${content.slice(firstLine.length)}`;
+      duplicateTitleFileRef.current = null;
+      if (duplicateToastIdRef.current) {
+        hideToast(duplicateToastIdRef.current);
+        duplicateToastIdRef.current = null;
+      }
+      setDisplayNames(prev => {
+        const next = new Map(prev);
+        next.set(selectedFile!, untitledName);
+        return next;
+      });
+    }
+
     try {
-      await writeFile(selectedFile, content);
+      await writeFile(selectedFile, contentToSave);
       // Update content in the tabs array
       setOpenTabs(prev => prev.map((tab, i) =>
-        i === activeTabIndex && tab.type === 'file' ? { ...tab, content } : tab
+        i === activeTabIndex && tab.type === 'file' ? { ...tab, content: contentToSave } : tab
       ));
 
       // Refresh tags after save to pick up new tags
@@ -1022,7 +1152,7 @@ const App: React.FC = () => {
       // Note: we rename the file directly here instead of calling handleRenameFile,
       // because handleRenameFile reads from the stale openTabs closure and would
       // overwrite the just-saved content with old content, causing body text loss.
-      const firstLine = content.split('\n')[0];
+      const firstLine = contentToSave.split('\n')[0];
       const titleMatch = firstLine.match(/^#\s+(.+)/);
       if (titleMatch && !isRenamingRef.current) {
         const newTitle = titleMatch[1].trim();
@@ -1364,6 +1494,8 @@ const App: React.FC = () => {
         setOpenTabs(prev => [...prev, { type: 'file', id: nextTabId++, path, content: initialContent }]);
         setActiveTabIndex(openTabs.length);
         setActivePanel('file');
+        setFocusTitlePath(path);
+        pushToHistory({ type: 'file', path });
       } catch (err: any) {
         console.error('Failed to create file:', err);
       }
@@ -2458,6 +2590,9 @@ const App: React.FC = () => {
                   blogs={blogs}
                   onPublishBlogBlock={handlePublishBlogBlock}
                   onTitleChange={handleTitleChange}
+                  onTitleBlur={handleTitleBlur}
+                  revertTitle={revertTitle}
+                  onTitleReverted={handleTitleReverted}
                   isDailyNote={selectedFile?.includes('/daily-notes/') ?? false}
                   focusTitleOnMount={selectedFile === focusTitlePath}
                 />
