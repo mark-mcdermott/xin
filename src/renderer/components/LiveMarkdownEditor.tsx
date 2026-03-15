@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { EditorState, EditorSelection, StateField, Text, Range } from '@codemirror/state';
 import {
   EditorView,
@@ -2305,6 +2305,10 @@ export const LiveMarkdownEditor: React.FC<LiveMarkdownEditorProps> = ({
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
 
+  // Link popup state (Cmd+K)
+  const [linkPopup, setLinkPopup] = useState<{ x: number; y: number; from: number; to: number; text: string } | null>(null);
+  const linkInputRef = useRef<HTMLInputElement>(null);
+
   const blogsRef = useRef(blogs);
   blogsRef.current = blogs;
 
@@ -2612,6 +2616,33 @@ tags: [""]
       }
     ]);
 
+    // Link shortcut: Mod-k wraps selected text in a markdown link
+    const linkKeymap = keymap.of([
+      {
+        key: 'Mod-k',
+        run: (view) => {
+          const { from, to } = view.state.selection.main;
+          const selectedText = view.state.sliceDoc(from, to);
+          if (!selectedText) return false;
+
+          // Get coordinates for popup positioning
+          const coords = view.coordsAtPos(from);
+          if (!coords || !containerRef.current) return false;
+          const containerRect = containerRef.current.getBoundingClientRect();
+          setLinkPopup({
+            x: coords.left - containerRect.left,
+            y: coords.bottom - containerRect.top + 4,
+            from,
+            to,
+            text: selectedText
+          });
+          // Focus the input after React renders
+          setTimeout(() => linkInputRef.current?.focus(), 0);
+          return true;
+        }
+      }
+    ]);
+
     // Tab key handler for smart navigation in frontmatter
     const tabKeymap = keymap.of([
       {
@@ -2843,6 +2874,42 @@ tags: [""]
           const pos = view.state.selection.main.head;
           const doc = view.state.doc;
           const line = doc.lineAt(pos);
+
+          // Check if cursor is inside a code block — if so, select only that block's content
+          let codeStart = -1;
+          for (let i = line.number; i >= 1; i--) {
+            if (doc.line(i).text.startsWith('```')) {
+              codeStart = i;
+              break;
+            }
+          }
+          if (codeStart !== -1) {
+            // Verify it's an opening fence by counting ``` lines before it
+            let fenceCount = 0;
+            for (let i = 1; i < codeStart; i++) {
+              if (doc.line(i).text.startsWith('```')) fenceCount++;
+            }
+            // Even count means this is an opening fence (cursor is inside a code block)
+            if (fenceCount % 2 === 0) {
+              // Find the closing fence
+              let codeEnd = -1;
+              for (let i = line.number; i <= doc.lines; i++) {
+                if (i !== codeStart && doc.line(i).text.startsWith('```')) {
+                  codeEnd = i;
+                  break;
+                }
+              }
+              if (codeEnd !== -1) {
+                const contentStart = doc.line(codeStart + 1).from;
+                const contentEnd = doc.line(codeEnd - 1).to;
+                if (contentStart <= contentEnd) {
+                  view.dispatch({ selection: { anchor: contentStart, head: contentEnd } });
+                  return true;
+                }
+              }
+            }
+          }
+
           if (line.number === 1) {
             // Title: select only the title text, preserving the "# " marker
             const line1 = doc.line(1);
@@ -3234,6 +3301,7 @@ tags: [""]
         spellCheckKeymap, // Cmd+. to show spelling suggestions
         keymap.of([...defaultKeymap, ...historyKeymap]),
         saveKeymap,
+        linkKeymap,
         markdown(),
         autocompletion({
           override: [wikilinkCompletionSource, blogCompletionSource, atBlogCompletionSource, spellCheckCompletionSource],
@@ -3706,13 +3774,80 @@ tags: [""]
     }
   }, []);
 
+  const handleLinkSubmit = useCallback((url: string) => {
+    if (!linkPopup || !viewRef.current) return;
+    let finalUrl = url.trim();
+    if (!finalUrl) { setLinkPopup(null); return; }
+    if (isExternalUrl(finalUrl) && !/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = 'https://' + finalUrl;
+    }
+    const replacement = `[${linkPopup.text}](${finalUrl})`;
+    viewRef.current.dispatch({
+      changes: { from: linkPopup.from, to: linkPopup.to, insert: replacement }
+    });
+    setLinkPopup(null);
+    viewRef.current.focus();
+  }, [linkPopup]);
+
   return (
-    <div
-      ref={containerRef}
-      className="h-full w-full overflow-hidden"
-      style={{ backgroundColor: 'var(--bg-primary)' }}
-      onMouseDown={handleMouseDown}
-      onClick={handleClick}
-    />
+    <div className="relative h-full w-full overflow-hidden">
+      <div
+        ref={containerRef}
+        className="h-full w-full overflow-hidden"
+        style={{ backgroundColor: 'var(--bg-primary)' }}
+        onMouseDown={handleMouseDown}
+        onClick={handleClick}
+      />
+      {linkPopup && (
+        <div
+          className="absolute z-50"
+          style={{
+            left: linkPopup.x,
+            top: linkPopup.y,
+            backgroundColor: 'var(--dialog-bg)',
+            border: '1px solid var(--border-light)',
+            borderRadius: 8,
+            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+            padding: 4
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <input
+            ref={linkInputRef}
+            type="text"
+            placeholder="Paste link"
+            className="cm-link-popup-input"
+            style={{
+              display: 'block',
+              width: 220,
+              padding: '8px 12px',
+              margin: 0,
+              borderRadius: 6,
+              backgroundColor: 'var(--sidebar-hover)',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif',
+              fontSize: 14,
+              fontWeight: 500,
+              color: 'var(--accent-primary)',
+              lineHeight: '1.4',
+              caretColor: 'var(--accent-primary)',
+              border: 'none',
+              outline: 'none',
+              boxSizing: 'border-box'
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleLinkSubmit((e.target as HTMLInputElement).value);
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                setLinkPopup(null);
+                viewRef.current?.focus();
+              }
+            }}
+            onBlur={() => setLinkPopup(null)}
+          />
+        </div>
+      )}
+    </div>
   );
 };

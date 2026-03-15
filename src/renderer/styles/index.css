@@ -836,6 +836,12 @@ input:focus, select:focus, textarea:focus {
   text-decoration: none !important;
 }
 
+/* Link popup input placeholder */
+.cm-link-popup-input::placeholder {
+  color: var(--accent-primary);
+  opacity: 0.5;
+}
+
 /* Hide the default icon area */
 .cm-completionIcon {
   display: none !important;
