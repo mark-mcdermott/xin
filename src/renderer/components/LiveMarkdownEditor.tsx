@@ -3781,9 +3781,11 @@ tags: [""]
     if (isExternalUrl(finalUrl) && !/^https?:\/\//i.test(finalUrl)) {
       finalUrl = 'https://' + finalUrl;
     }
-    const replacement = `[${linkPopup.text}](${finalUrl})`;
+    const replacement = `[${linkPopup.text}](${finalUrl}) `;
+    const cursorPos = linkPopup.from + replacement.length;
     viewRef.current.dispatch({
-      changes: { from: linkPopup.from, to: linkPopup.to, insert: replacement }
+      changes: { from: linkPopup.from, to: linkPopup.to, insert: replacement },
+      selection: { anchor: cursorPos }
     });
     setLinkPopup(null);
     viewRef.current.focus();
@@ -3819,7 +3821,8 @@ tags: [""]
             className="cm-link-popup-input"
             style={{
               display: 'block',
-              width: 220,
+              width: 'auto',
+              minWidth: 140,
               padding: '8px 12px',
               margin: 0,
               borderRadius: 6,
@@ -3832,7 +3835,8 @@ tags: [""]
               caretColor: 'var(--accent-primary)',
               border: 'none',
               outline: 'none',
-              boxSizing: 'border-box'
+              boxSizing: 'border-box',
+              textAlign: 'left'
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
