@@ -566,6 +566,37 @@ const App: React.FC = () => {
     }
   }, [vaultPath, vaultInitialized, getTodayNote]);
 
+  // Check for midnight crossover and create today's daily note
+  useEffect(() => {
+    if (!vaultPath || !vaultInitialized) return;
+
+    const getDateString = () => {
+      const d = new Date();
+      return `${String(d.getFullYear()).slice(-2)}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    let lastDate = getDateString();
+
+    const interval = setInterval(async () => {
+      const currentDate = getDateString();
+      if (currentDate !== lastDate) {
+        lastDate = currentDate;
+        try {
+          const { path, content } = await getTodayNote();
+          setOpenTabs((prev) => [{ type: 'file', id: nextTabId++, path, content }, ...prev]);
+          setActiveTabIndex(0);
+          const dates = await getDailyNoteDates();
+          setDailyNoteDates(dates);
+          await refreshFileTree();
+        } catch (err) {
+          console.error('Failed to create daily note at midnight:', err);
+        }
+      }
+    }, 60_000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [vaultPath, vaultInitialized, getTodayNote, getDailyNoteDates, refreshFileTree]);
+
   // Load daily note dates on mount
   useEffect(() => {
     const loadDates = async () => {
