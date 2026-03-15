@@ -20,6 +20,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "package": "pnpm run build && electron-builder --mac",
+    "package:win": "pnpm run build && electron-builder --win",
     "demo:record": "pnpm run build && playwright test --config playwright.demo.config.ts",
     "demo:record:one": "pnpm run build && playwright test --config playwright.demo.config.ts -g"
   },
@@ -54,6 +55,19 @@
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
     },
     "dmg": {
       "sign": true

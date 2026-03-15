@@ -2,7 +2,7 @@
 
 <div align="center">
   <h1><img src="src/renderer/assets/pink-and-gray-mech-right.png" width="35" /> Xin</h1> 
-  <p>A desktop mac app for note-taking and publishing blog posts</p>
+  <p>A desktop app for note-taking and publishing blog posts (macOS &amp; Windows)</p>
 </div>
 
 https://github.com/user-attachments/assets/7898dd6a-8798-4846-8e0e-81596a8f353b
@@ -36,9 +36,9 @@ https://github.com/user-attachments/assets/7898dd6a-8798-4846-8e0e-81596a8f353b
    ```bash
    pnpm run package
    ```
-3. Open the generated `.dmg` from the `release/` folder
-4. Drag Xin into your Applications folder
-5. Open Xin from Applications
+3. Open the generated `.dmg` (macOS) or `.exe` installer (Windows) from the `release/` folder
+4. **macOS**: Drag Xin into your Applications folder. **Windows**: Follow the installer prompts.
+5. Open Xin
 
 ## About
 
