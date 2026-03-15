@@ -1,6 +1,6 @@
 {
   "name": "xin",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A lightweight desktop note-taking app and CMS",
   "type": "module",
   "packageManager": "pnpm@10.28.2",
