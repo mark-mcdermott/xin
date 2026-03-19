@@ -17,6 +17,9 @@
 | App Test | `/app-test` | Workflow | Testing the app for errors (Playwright) |
 | Progress Review | `/progress-review` | Audit | Spaced repetition review of learned concepts |
 | Commit | `/commit` | Workflow | Quick git commits with conversation context |
+| Branch and Feature | `/baf` | Workflow | Create a branch and start building a feature |
+| Commit and PR | `/cap` | Workflow | Commit, push, and create a PR in one step |
+| Merged | `/merged` | Workflow | Clean up after merging a PR |
 | Educational Workflow | `/educational-workflow` | Workflow | Structured workflow for sessions |
 | Docs Audit | `/docs-audit` | Audit | Audit documentation for broken references and orphans |
 
@@ -43,6 +46,22 @@
 **Usage**: `/commit`
 **Does**: Checks status, stages and commits with gitmoji + one-sentence message
 **Note**: For complex git operations (conflicts, rebase), delegate to git-manager agent
+
+### /baf (branch-and-feature)
+**Purpose**: Create a new branch and immediately start building a feature
+**Usage**: `/baf <branch-name> <feature description>`
+**Examples**: `/baf merch-store add a merch store page`, `/baf fix/broken-publish fix the publish flow`
+**Does**: Creates branch (auto-prefixes `feat/`), then builds the described feature
+
+### /cap (commit-and-pr)
+**Purpose**: Commit all changes, push, and create a PR in one step
+**Usage**: `/cap`
+**Does**: Runs checks, commits with gitmoji, analyzes full branch, pushes, creates PR via `gh`
+
+### /merged
+**Purpose**: Clean up after merging a PR
+**Usage**: `/merged`
+**Does**: Checks out main, pulls latest, deletes the merged branch locally and on remote
 
 ### /educational-workflow
 **Purpose**: Structured workflow patterns for educational sessions
