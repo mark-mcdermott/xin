@@ -21,6 +21,9 @@ pnpm run package      # Build + macOS DMG packaging
 | Command | Purpose |
 |---------|---------|
 | `/commit` | Git commit with conversation context |
+| `/baf` | Create branch + start building a feature |
+| `/cap` | Commit, push, and create PR in one step |
+| `/merged` | Clean up after merging a PR |
 | `/app-test` | Run Playwright E2E tests |
 | `/lesson-start` | Initialize a learning session |
 | `/progress-review` | Spaced repetition review |
